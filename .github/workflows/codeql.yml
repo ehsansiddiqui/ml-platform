@@ -2,7 +2,7 @@ name: tester2
 on:
   push:
     branches:
-      - master
+      - main
       - review/**
     #paths:
       #- 'code/**'
