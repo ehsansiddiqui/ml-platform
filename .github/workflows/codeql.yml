@@ -1,79 +1,100 @@
-name: Check Dependencies
+name: Open a release PR
 on:
-  push:
-    paths-ignore:
-      - 'doc/**'
-      - '**/man'
-      - '**.md'
-      - '**.rdoc'
-      - '**/.document'
-  pull_request:
-    paths-ignore:
-      - 'doc/**'
-      - '**/man'
-      - '**.md'
-      - '**.rdoc'
-      - '**/.document'
-  merge_group:
-    paths-ignore:
-      - 'doc/**'
-      - '**/man'
-      - '**.md'
-      - '**.rdoc'
-      - '**/.document'
-
-concurrency:
-  group: ${{ github.workflow }} / ${{ startsWith(github.event_name, 'pull') && github.ref_name || github.sha }}
-  cancel-in-progress: ${{ startsWith(github.event_name, 'pull') }}
-
-permissions:
-  contents: read
+  workflow_dispatch:
+    inputs:
+      crate:
+        description: Crate to release
+        required: true
+        type: choice
+        choices:
+          - cli
+          - lib
+          - filterer-globset
+          - filterer-ignore
+          - filterer-tagged
+          - ignore-files
+          - project-origins
+      version:
+        description: Version to release
+        required: true
+        type: string
 
 jobs:
-  update-deps:
-    strategy:
-      matrix:
-        os: [ubuntu-20.04]
-      fail-fast: true
-    runs-on: ${{ matrix.os }}
-    if: ${{ !contains(github.event.head_commit.message, '[DOC]') && !contains(github.event.pull_request.labels.*.name, 'Documentation') }}
+  make-branch:
+    runs-on: ubuntu-latest
     steps:
-      - name: Install libraries
-        run: |
-          set -x
-          sudo apt-get update -q || :
-          sudo apt-get install --no-install-recommends -q -y build-essential libssl-dev libyaml-dev libreadline6-dev zlib1g-dev libncurses5-dev libffi-dev bison autoconf ruby
-        if: ${{ contains(matrix.os, 'ubuntu') }}
-      - name: Install libraries
-        run: |
-          brew upgrade
-          brew install gmp libffi openssl@1.1 zlib autoconf automake libtool readline
-        if: ${{ contains(matrix.os, 'macos') }}
-      - name: git config
-        run: |
-          git config --global advice.detachedHead 0
-          git config --global init.defaultBranch garbage
-      - uses: actions/checkout@8f4b7f84864484a7bf31766abe9204da3cbe65b3 # v3.5.0
-      - uses: actions/cache@88522ab9f39a2ea568f7027eddc7d8d8bc9d59c8 # v3.3.1
+      - name: Install cargo-release
+        uses: baptiste0928/cargo-install@v1
         with:
-          path: .downloaded-cache
-          key: downloaded-cache
-      - run: ./autogen.sh
-      - name: Run configure
-        run: ./configure -C --disable-install-doc --disable-rubygems --with-gcc 'optflags=-O0' 'debugflags=-save-temps=obj -g'
-      - run: make all golf
-      - run: ruby tool/update-deps --fix
-      - run: git diff --no-ext-diff --ignore-submodules --exit-code
-      - uses: ruby/action-slack@0bd85c72233cdbb6a0fe01d37aaeff1d21b5fce1 # v3.2.1
+          crate: cargo-release
+          version: "0.21"
+
+      - uses: actions/checkout@v2
         with:
-          payload: |
-            {
-              "ci": "GitHub Actions",
-              "env": "${{ matrix.os }} / Dependencies need to update",
-              "url": "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}",
-              "commit": "${{ github.sha }}",
-              "branch": "${{ github.ref_name }}"
-            }
+          ref: main
+      - name: Make branch "release-${{ inputs.crate }}-${{ inputs.version }}"
+        run: git switch -c "release-${{ inputs.crate }}-${{ inputs.version }}"
+
+      - name: Find crate name
+        run: |
+          set -euxo pipefail
+          pushd "crates/${{ inputs.crate }}"
+          crate_name=$(head Cargo.toml -n2 | grep name | cut -d '"' -f2)
+          echo "crate_name=${crate_name}" >> $GITHUB_ENV
+          popd
+
+      - name: Do release
+        run: |
+          set -euxo pipefail
+          git config user.name github-actions
+          git config user.email github-actions@github.com
+          cargo release \
+            --execute \
+            --no-push \
+            --no-tag \
+            --no-publish \
+            --no-confirm \
+            --verbose \
+            --allow-branch "release-${{ inputs.crate }}-${{ inputs.version }}"
+            --package "${{ env.crate_name }}" \
+            "${{ inputs.version }}"
+
+      - name: Push new branch
+        run: |
+          set -euxo pipefail
+          git push origin "release-${{ inputs.crate }}-${{ inputs.version }}"
+
+  make-pr:
+    runs-on: ubuntu-latest
+    needs: make-branch
+    steps:
+      - run: |
+          set -euxo pipefail
+          title="release: ${{ inputs.crate }} v${{ inputs.version }}"
+          body="This is a release PR for **${{ inputs.crate }}** to version **${{ inputs.version }}**."
+          if [[ "${{ inputs.crate }}" == "cli" ]]; then
+            body="$body
+
+            Upon merging, this will automatically build the CLI and create a GitHub release. You still need to manually publish the cargo crate."
+          else
+            body="$body
+
+            Upon merging, you will still need to manually publish the cargo crate."
+          fi
+          body="$body
+
+          \`\`\`
+          $ cd crates/${{ inputs.crate }}
+          $ cargo publish
+          \`\`\`
+
+          To merge this release, review the changes then say:
+
+          \`\`\`
+          bors r+
+          \`\`\`"
+
+          pr_url=$(gh pr create --title "$title" --body "$body" --base main --head "release-${{ inputs.crate }}-${{ inputs.version }}" --label "release")
+          gh pr comment "$pr_url" --body "bors single on\nbors p=10"
         env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SIMPLER_ALERTS_URL }} # ruby-lang slack: ruby/simpler-alerts-bot
-        if: ${{ failure() && github.event_name == 'push' }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
