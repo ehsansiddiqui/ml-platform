@@ -1,4 +1,4 @@
-name: Update license data
+name: license data
 
 on:
   schedule:
