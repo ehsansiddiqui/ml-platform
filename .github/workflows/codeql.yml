@@ -1,6 +1,8 @@
 name: Node CI
 
-on: [push]
+on:
+  - push
+  - pull_request
 
 jobs:
   test:
@@ -36,7 +38,7 @@ jobs:
       run: npm run test:mocha
       env:
         PGUSER: postgres
-        PGPASS: postgres
+        PGPASSWORD: postgres
         PGDATABASE: postgres
         PGPORT: ${{ job.services.postgres.ports[5432] }}
     - name: Coveralls Parallel
