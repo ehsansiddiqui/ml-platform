@@ -1,4 +1,4 @@
-name: tester2
+name: tester
 on:
   push:
     branches:
@@ -10,7 +10,7 @@ on:
       - '[0-9]+.[0-9]+.[0-9]+'
   pull_request:
     branches:
-      - master
+      - main
     paths:
       - 'code/**'
 
