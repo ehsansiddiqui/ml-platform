@@ -1,5 +1,4 @@
 name: Test instance deployment
-
 on:
   workflow_call:
     inputs:
