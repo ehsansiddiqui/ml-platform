@@ -1,38 +1,52 @@
-name: Release Pull Request Automation
-# Controls when the action will run. Triggers the workflow on create branch or tag
-# events but only acts on branch create.
-on:
-  create:
+# License: LGPL-3.0-or-later
+name: NOTICE-ruby verification
+on: 
+  push:
+    paths:
+      - Gemfile
+      - Gemfile.lock
+      - NOTICE-ruby
+  pull_request:
+    paths:
+      - Gemfile
+      - Gemfile.lock
+      - NOTICE-ruby
+env:
+  os: ubuntu-20.04
+  ruby: '2.7.4'
 jobs:
-  release-pull-request-automation:
-    if: ${{ github.event.ref_type == 'main' && contains( github.ref, 'main' ) }}
-    env:
-      SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
-    runs-on: ubuntu-latest
+  notice_ruby:
+    runs-on: ubuntu-20.04
     steps:
-      - uses: act10ns/slack@v1
+      - uses: actions/checkout@v2
+      - uses: ruby/setup-ruby@v1
         with:
-          status: starting
-          if: ${{ always() }}
-      - name: Checkout code
-        uses: actions/checkout@v2
-      - name: Create changeset for pull request
+          ruby-version: ${{ env.ruby }}
+      - uses: actions/cache@v2
+        name: Use Gem cache
+        with:
+          path: vendor/bundle
+          key: bundle-use-ruby-${{ env.os }}-${{ env.ruby }}-${{ hashFiles('**/Gemfile.lock') }}
+          restore-keys: |
+            bundle-use-ruby-${{ env.os }}-${{ env.ruby }}-
+      - run: |
+          bundle config deployment true
+          bundle config path vendor/bundle
+          bundle install --jobs 4
+      - name: run notice:ruby:verify
         run: |
-          date > .release-artifact
+            bin/rails notice:ruby:verify
+      - name: Describe what's in context
+        run: |
+          echo ${{ failure() }}
+          echo ${{ github.actor }}
+          echo ${{ github.event_name }}
+      - name: Update NOTICE-ruby on Dependabot
+        if: ${{ failure() && github.actor == 'apps/dependabot' && github.event_name == 'push'}}
+        run: |
+          bin/rails notice:ruby:update
           git config user.name github-actions
           git config user.email github-actions@github.com
           git add .
-          git commit -m "generating changeset for pull request"
-          rm .release-artifact
-          git commit -am "generating changeset for pull request"
-          git push
-      - name: Create Release Pull Request
-        uses: woocommerce/automations@v1
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          automations: release
-      - uses: act10ns/slack@v1
-        with:
-          status: ${{ job.status }}
-          steps: ${{ toJson(steps) }}
-        if: ${{ always() }}
+          git commit -m "Update NOTICE-ruby"
+          git push HEAD:${{ github.ref }}
