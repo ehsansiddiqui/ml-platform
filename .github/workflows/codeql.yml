@@ -1,53 +1,91 @@
-name: test
+name: ci
 
-'on':
+on:
   push:
-  pull_request:
     branches:
-      # Branches from forks have the form 'user:branch-name'. Reference:
-      # https://github.community/t/how-to-trigger-an-action-on-push-or-pull-request-but-not-both/16662/9
-      - '**:**'
-  workflow_dispatch:
+      - 'main'
+      - 'feature/*'
+      - 'releases/'
+    paths-ignore:
+      - '**.md'
+  pull_request:
+    paths-ignore:
+      - '**.md'
 
 jobs:
-  build:
-    runs-on: ubuntu-latest
+  ci:
+    runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
-        python-version: [3.6, 3.7, 3.8, 3.9]
-
+        os:
+          - ubuntu-latest
+          - macOS-latest
+          - windows-latest
+        version:
+          - latest
+          - v0.117.0
     steps:
-    - uses: actions/checkout@v2
-    - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v2
-      with:
-        python-version: ${{ matrix.python-version }}
+      -
+        name: Checkout
+        uses: actions/checkout@v2
+      -
+        name: Unshallow
+        run: git fetch --prune --unshallow
+      -
+        name: Set up Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: 1.14
+      -
+        name: Check
+        uses: ./
+        with:
+          version: ${{ matrix.version }}
+          args: check --debug
+      -
+        name: GoReleaser
+        uses: ./
+        with:
+          version: ${{ matrix.version }}
+          args: release --skip-publish --rm-dist
 
-    - name: Install poetry
-      run: |
-        pip install -U pip
-
-        curl -sSL \
-          "https://raw.githubusercontent.com/python-poetry/poetry/master/get-poetry.py" | python -
-
-        echo "${HOME}/.poetry/bin" >> $GITHUB_PATH
-
-    - name: Set up cache
-      uses: actions/cache@v1
-      with:
-        path: .venv
-        key: venv-${{ matrix.python-version }}-${{ hashFiles('poetry.lock') }}
-    - name: Install dependencies
-      run: |
-        poetry config virtualenvs.in-project true
-        poetry run pip install -U pip
-        poetry install
-
-    - name: Run tests
-      run: |
-        make test
-
-    - name: Upload coverage to Codecov
-      uses: codecov/codecov-action@v1
-      with:
-        file: ./coverage.xml
+  signing:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - ubuntu-latest
+          - macOS-latest
+          - windows-latest
+    steps:
+      -
+        name: Checkout
+        uses: actions/checkout@v2
+      -
+        name: Unshallow
+        run: git fetch --prune --unshallow
+      -
+        name: Set up Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: 1.14
+      -
+        name: Import GPG key
+        uses: crazy-max/ghaction-import-gpg@v1
+        env:
+          GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY_TEST }}
+          PASSPHRASE: ${{ secrets.PASSPHRASE_TEST }}
+      -
+        name: Check
+        uses: ./
+        with:
+          version: latest
+          args: -f .goreleaser-signing.yml check --debug
+      -
+        name: GoReleaser
+        uses: ./
+        with:
+          version: latest
+          args: -f .goreleaser-signing.yml release --skip-publish --rm-dist
