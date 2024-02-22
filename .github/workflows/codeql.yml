@@ -5,7 +5,7 @@ on:
   create:
 jobs:
   release-pull-request-automation:
-    if: ${{ github.event.ref_type == 'main' && contains( github.ref, 'release/' ) }}
+    if: ${{ github.event.ref_type == 'main' && contains( github.ref, 'main' ) }}
     env:
       SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
     runs-on: ubuntu-latest
