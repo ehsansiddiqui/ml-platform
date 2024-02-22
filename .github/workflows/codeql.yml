@@ -1,5 +1,4 @@
 name: Triage
-
 on:
   pull_request_target:
     types:
