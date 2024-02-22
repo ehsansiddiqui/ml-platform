@@ -1,73 +1,53 @@
-name: Node CI
+name: test
 
-on:
-  - push
-  - pull_request
+'on':
+  push:
+  pull_request:
+    branches:
+      # Branches from forks have the form 'user:branch-name'. Reference:
+      # https://github.community/t/how-to-trigger-an-action-on-push-or-pull-request-but-not-both/16662/9
+      - '**:**'
+  workflow_dispatch:
 
 jobs:
-  test:
-    name: Test on node ${{ matrix.node_version }} and ${{ matrix.os }} with Postgres ${{ matrix.postgres_version }}
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        node_version: [10, 12]
-        os: [ubuntu-latest]
-        postgres_version: [12, 11, 10, 9.6]
-    services:
-      postgres:
-        image: postgres:${{ matrix.postgres_version }}
-        env:
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: postgres
-        ports:
-        # will assign a random free host port
-        - 5432/tcp
-        # needed because the postgres container does not provide a healthcheck
-        options: --health-cmd pg_isready --health-interval 10s --health-timeout 5s --health-retries 5
-    steps:
-    - uses: actions/checkout@v1
-    - name: Use Node.js ${{ matrix.node_version }}
-      uses: actions/setup-node@v1
-      with:
-        version: ${{ matrix.node_version }}
-    - name: npm install
-      run: npm install
-    - name: Mocha tests
-      run: npm run test:mocha
-      env:
-        PGUSER: postgres
-        PGPASSWORD: postgres
-        PGDATABASE: postgres
-        PGPORT: ${{ job.services.postgres.ports[5432] }}
-    - name: Coveralls Parallel
-      uses: coverallsapp/github-action@master
-      with:
-        github-token: ${{ secrets.github_token }}
-        parallel: true
-    - name: Coveralls Finished
-      uses: coverallsapp/github-action@master
-      with:
-        github-token: ${{ secrets.github_token }}
-        parallel-finished: true
-  lint:
-    name: Static code analysis / Linting
-    runs-on: ${{ matrix.os }}
+  build:
+    runs-on: ubuntu-latest
     strategy:
       matrix:
-        node_version: [10]
-        os: [ubuntu-latest]
+        python-version: [3.6, 3.7, 3.8, 3.9]
 
     steps:
-    - uses: actions/checkout@v1
-    - name: Use Node.js ${{ matrix.node_version }}
-      uses: actions/setup-node@v1
+    - uses: actions/checkout@v2
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v2
       with:
-        version: ${{ matrix.node_version }}
+        python-version: ${{ matrix.python-version }}
 
-    - name: npm install, build and test
+    - name: Install poetry
       run: |
-        npm install
-        npm run build --if-present
-        npm run check
+        pip install -U pip
+
+        curl -sSL \
+          "https://raw.githubusercontent.com/python-poetry/poetry/master/get-poetry.py" | python -
+
+        echo "${HOME}/.poetry/bin" >> $GITHUB_PATH
+
+    - name: Set up cache
+      uses: actions/cache@v1
+      with:
+        path: .venv
+        key: venv-${{ matrix.python-version }}-${{ hashFiles('poetry.lock') }}
+    - name: Install dependencies
+      run: |
+        poetry config virtualenvs.in-project true
+        poetry run pip install -U pip
+        poetry install
+
+    - name: Run tests
+      run: |
+        make test
+
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v1
+      with:
+        file: ./coverage.xml
