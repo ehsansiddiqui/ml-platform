@@ -1,34 +1,79 @@
-name: Enable auto-merge
-
+name: Check Dependencies
 on:
-  schedule:
-    - cron: 0 * * * *
-  pull_request_target:
-    types:
-      - opened
-      - synchronized
-      - reopened
-      - edited
-      - labeled
-      - unlabeled
-      - ready_for_review
+  push:
+    paths-ignore:
+      - 'doc/**'
+      - '**/man'
+      - '**.md'
+      - '**.rdoc'
+      - '**/.document'
+  pull_request:
+    paths-ignore:
+      - 'doc/**'
+      - '**/man'
+      - '**.md'
+      - '**.rdoc'
+      - '**/.document'
+  merge_group:
+    paths-ignore:
+      - 'doc/**'
+      - '**/man'
+      - '**.md'
+      - '**.rdoc'
+      - '**/.document'
 
 concurrency:
-  group: automerge
+  group: ${{ github.workflow }} / ${{ startsWith(github.event_name, 'pull') && github.ref_name || github.sha }}
+  cancel-in-progress: ${{ startsWith(github.event_name, 'pull') }}
 
-permissions: {}
+permissions:
+  contents: read
 
 jobs:
-  automerge:
-    runs-on: ubuntu-latest
+  update-deps:
+    strategy:
+      matrix:
+        os: [ubuntu-20.04]
+      fail-fast: true
+    runs-on: ${{ matrix.os }}
+    if: ${{ !contains(github.event.head_commit.message, '[DOC]') && !contains(github.event.pull_request.labels.*.name, 'Documentation') }}
     steps:
-      - uses: reitermarkus/automerge@c4674ad9c3cdb43136d8f96d69ae7444dd74acb0
+      - name: Install libraries
+        run: |
+          set -x
+          sudo apt-get update -q || :
+          sudo apt-get install --no-install-recommends -q -y build-essential libssl-dev libyaml-dev libreadline6-dev zlib1g-dev libncurses5-dev libffi-dev bison autoconf ruby
+        if: ${{ contains(matrix.os, 'ubuntu') }}
+      - name: Install libraries
+        run: |
+          brew upgrade
+          brew install gmp libffi openssl@1.1 zlib autoconf automake libtool readline
+        if: ${{ contains(matrix.os, 'macos') }}
+      - name: git config
+        run: |
+          git config --global advice.detachedHead 0
+          git config --global init.defaultBranch garbage
+      - uses: actions/checkout@8f4b7f84864484a7bf31766abe9204da3cbe65b3 # v3.5.0
+      - uses: actions/cache@88522ab9f39a2ea568f7027eddc7d8d8bc9d59c8 # v3.3.1
         with:
-          token: ${{secrets.HOMEBREW_GITHUB_PUBLIC_REPO_TOKEN}}
-          merge-method: squash
-          squash-commit-title: ${pull_request.title} (#${pull_request.number})
-          squash-commit-message: '\n'
-          do-not-merge-labels: automerge-skip,do not merge
-          required-labels: bump-cask-pr
-          pull-request-author-associations: MEMBER,OWNER
-          dry-run: true
+          path: .downloaded-cache
+          key: downloaded-cache
+      - run: ./autogen.sh
+      - name: Run configure
+        run: ./configure -C --disable-install-doc --disable-rubygems --with-gcc 'optflags=-O0' 'debugflags=-save-temps=obj -g'
+      - run: make all golf
+      - run: ruby tool/update-deps --fix
+      - run: git diff --no-ext-diff --ignore-submodules --exit-code
+      - uses: ruby/action-slack@0bd85c72233cdbb6a0fe01d37aaeff1d21b5fce1 # v3.2.1
+        with:
+          payload: |
+            {
+              "ci": "GitHub Actions",
+              "env": "${{ matrix.os }} / Dependencies need to update",
+              "url": "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}",
+              "commit": "${{ github.sha }}",
+              "branch": "${{ github.ref_name }}"
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SIMPLER_ALERTS_URL }} # ruby-lang slack: ruby/simpler-alerts-bot
+        if: ${{ failure() && github.event_name == 'push' }}
