@@ -1,12 +1,11 @@
 name: Release Pull Request Automation
-
 # Controls when the action will run. Triggers the workflow on create branch or tag
 # events but only acts on branch create.
 on:
   create:
 jobs:
   release-pull-request-automation:
-    if: ${{ github.event.ref_type == 'branch' && contains( github.ref, 'release/' ) }}
+    if: ${{ github.event.ref_type == 'main' && contains( github.ref, 'release/' ) }}
     env:
       SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
     runs-on: ubuntu-latest
