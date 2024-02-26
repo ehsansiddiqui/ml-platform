@@ -1,41 +1,39 @@
-name: Update license data
+name: Release Pull Request Automation
 
+# Controls when the action will run. Triggers the workflow on create branch or tag
+# events but only acts on branch create.
 on:
-  schedule:
-    - cron: '* */12 * * *'
-
+  create:
 jobs:
-  spdx:
-    runs-on: ubuntu-latest
+  release-pull-request-automation:
+    if: ${{ github.event.ref_type == 'branch' && contains( github.ref, 'release/' ) }}
     env:
-      HOMEBREW_NO_ANALYTICS: 1
-      HOMEBREW_NO_AUTO_UPDATE: 1
+      SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+    runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v2
-
-      - name: Configure Git
-        uses: Homebrew/actions/git-user-config@master
+      - uses: act10ns/slack@v1
         with:
-          username: BrewTestBot
-
-      - name: Setup Homebrew
+          status: starting
+          if: ${{ always() }}
+      - name: Checkout code
+        uses: actions/checkout@v2
+      - name: Create changeset for pull request
         run: |
-          HOMEBREW_REPOSITORY="$(brew --repo)"
-          rm -rf "$HOMEBREW_REPOSITORY"
-          ln -s "$GITHUB_WORKSPACE" "$HOMEBREW_REPOSITORY"
-
-      - name: Update license data
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          HOMEBREW_GITHUB_API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          cd "$GITHUB_WORKSPACE/Library/Homebrew"
-          if brew update-license-data --commit --fail-if-not-changed; then
-            SPDX_VERSION=$(jq -er .licenseListVersion data/spdx.json)
-            if ! git ls-remote --exit-code --heads origin "spdx-$SPDX_VERSION"; then
-              git checkout -b "spdx-$SPDX_VERSION"
-              git push origin "spdx-$SPDX_VERSION"
-              hub pull-request -m "$(git log -1 --format='%s')"
-            fi
-          fi
+          date > .release-artifact
+          git config user.name github-actions
+          git config user.email github-actions@github.com
+          git add .
+          git commit -m "generating changeset for pull request"
+          rm .release-artifact
+          git commit -am "generating changeset for pull request"
+          git push
+      - name: Create Release Pull Request
+        uses: woocommerce/automations@v1
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          automations: release
+      - uses: act10ns/slack@v1
+        with:
+          status: ${{ job.status }}
+          steps: ${{ toJson(steps) }}
+        if: ${{ always() }}
