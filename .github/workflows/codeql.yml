@@ -1,46 +1,14 @@
-name: "UpdateOctokit"
-
+name: Auto Request Review
 on:
-  schedule:
-    - cron: '0 18 * * 0' # sunday at 18 UTC
-
+  pull_request_target:
+    types: [opened, synchronized, ready_for_review, reopened]
 jobs:
-  UpdateOctokit:
+  auto-request-review:
+    name: Auto Request Review
     runs-on: ubuntu-latest
-    if: ${{ github.repository_owner == 'actions' }}
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v2
-    - name: Update Octokit
-      working-directory: packages/github 
-      run: |
-        npx npm-check-updates -u --dep prod
-        npm install
-    - name: Check Status
-      id: status
-      working-directory: packages/github 
-      run: | 
-        if [[ "$(git status --porcelain)" != "" ]]; then 
-        echo "::set-output name=createPR::true"
-        git config --global user.email "github-actions[bot]@users.noreply.github.com"
-        git config --global user.name "github-actions[bot]"
-        git checkout -b bots/updateGitHubDependencies-${{github.run_number}}
-        git add .
-        git commit -m "Update Dependencies"
-        git push --set-upstream origin bots/updateGitHubDependencies-${{github.run_number}}
-        fi
-    - name: Create PR
-      if: ${{steps.status.outputs.createPR}}
-      uses: actions/github-script@v2
-      with:
-          github-token: ${{secrets.GITHUB_TOKEN}}
-          script: |
-            github.pulls.create(
-            {
-              base: "master",
-              owner: "${{github.repository_owner}}",
-              repo: "toolkit",
-              title: "Update Octokit dependencies",
-              body: "Update Octokit dependencies",
-              head: "bots/updateGitHubDependencies-${{github.run_number}}"
-            })
+      - name: Request review based on files changes and/or groups the author belongs to
+        uses: necojackarc/auto-request-review@e08cdffa277d50854744de3f76230260e61c67f4 # v0.7.0, checking sha
+        with:
+          # scope: repo:status
+          token: ${{ secrets.MATZBOT_GITHUB_TOKEN }}
