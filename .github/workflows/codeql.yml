@@ -2,7 +2,7 @@ name: Update license data
 
 on:
   schedule:
-    - cron: '* * * * *'
+    
 
 jobs:
   spdx:
