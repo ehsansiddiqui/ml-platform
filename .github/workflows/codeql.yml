@@ -5,7 +5,7 @@ on:
     types: [opened, synchronized, ready_for_review, reopened]
 jobs:
   auto-request-review:
-    name: Auto Request Review
+    name: Auto Requ
     runs-on: ubuntu-latest
     steps:
       - name: Request review based on files changes and/or groups the author belongs to
