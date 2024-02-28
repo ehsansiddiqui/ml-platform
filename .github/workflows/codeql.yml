@@ -1,32 +1,15 @@
-name: Canary
-
+name: Auto Request Review
 on:
   workflow_dispatch:
+  pull_request_target:
+    types: [opened, synchronized, ready_for_review, reopened]
 jobs:
-  build:
+  auto-request-review:
+    name: Auto Request Review
     runs-on: ubuntu-latest
-    if: github.event.release.prerelease === false
     steps:
-      - uses: actions/checkout@master
-      - name: Use Node.js 12.x
-        uses: actions/setup-node@v1.1.0
+      - name: Request review based on files changes and/or groups the author belongs to
+        uses: necojackarc/auto-request-review@e08cdffa277d50854744de3f76230260e61c67f4 # v0.7.0, checking sha
         with:
-          version: 12.x
-      - run: git config --global user.email "me@imbhargav5.com"
-      - run: git config --global user.name "Bhargav Ponnapalli"
-      - name: Installs yarn
-        run: npm i -g yarn
-      - name: Install now
-        run: now --version || npm i -g now
-      - name: yarn install and build
-        run: |
-          yarn
-          yarn build:action
-      - name: test
-        run: yarn test
-      - name: Add npm token
-        run: echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}" > ~/.npmrc
-    #   - name: Create prerelease version
-    #     run: yarn run ga-prerelease-version --preid ${GITHUB_SHA::8}
-      - name: Publish prerelease version
-        run: yarn run ga-npm-publish --dist-tag canary
+          # scope: repo:status
+          token: ${{ secrets.MATZBOT_GITHUB_TOKEN }}
