@@ -1,39 +1,34 @@
-name: Release Pull Request Automation
+name: Canary
 
-# Controls when the action will run. Triggers the workflow on create branch or tag
-# events but only acts on branch create.
 on:
-  create:
+  release:
+    types: [published]
+
 jobs:
-  release-pull-request-automation:
-    if: ${{ github.event.ref_type == 'branch' && contains( github.ref, 'release/' ) }}
-    env:
-      SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+  build:
     runs-on: ubuntu-latest
+    if: github.event.release.prerelease === false
     steps:
-      - uses: act10ns/slack@v1
+      - uses: actions/checkout@master
+      - name: Use Node.js 12.x
+        uses: actions/setup-node@v1.1.0
         with:
-          status: starting
-          if: ${{ always() }}
-      - name: Checkout code
-        uses: actions/checkout@v2
-      - name: Create changeset for pull request
+          version: 12.x
+      - run: git config --global user.email "me@imbhargav5.com"
+      - run: git config --global user.name "Bhargav Ponnapalli"
+      - name: Installs yarn
+        run: npm i -g yarn
+      - name: Install now
+        run: now --version || npm i -g now
+      - name: yarn install and build
         run: |
-          date > .release-artifact
-          git config user.name github-actions
-          git config user.email github-actions@github.com
-          git add .
-          git commit -m "generating changeset for pull request"
-          rm .release-artifact
-          git commit -am "generating changeset for pull request"
-          git push
-      - name: Create Release Pull Request
-        uses: woocommerce/automations@v1
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          automations: release
-      - uses: act10ns/slack@v1
-        with:
-          status: ${{ job.status }}
-          steps: ${{ toJson(steps) }}
-        if: ${{ always() }}
+          yarn
+          yarn build:action
+      - name: test
+        run: yarn test
+      - name: Add npm token
+        run: echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}" > ~/.npmrc
+    #   - name: Create prerelease version
+    #     run: yarn run ga-prerelease-version --preid ${GITHUB_SHA::8}
+      - name: Publish prerelease version
+        run: yarn run ga-npm-publish --dist-tag canary
