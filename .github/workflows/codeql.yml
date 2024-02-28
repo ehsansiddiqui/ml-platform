@@ -1,15 +1,33 @@
-name: Auto Request Review
-on:
+name: depup
+
+'on':
   workflow_dispatch:
-  pull_request_target:
-    types: [opened, synchronized, ready_for_review, reopened]
+  schedule:
+    - cron: '30 7 * * *'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: read|write
+
 jobs:
-  auto-request-review:
-    name: Auto Requ
+  reviewdog:
     runs-on: ubuntu-latest
     steps:
-      - name: Request review based on files changes and/or groups the author belongs to
-        uses: necojackarc/auto-request-review@e08cdffa277d50854744de3f76230260e61c67f4 # v0.7.0, checking sha
+      - uses: actions/checkout@v4
+      - uses: haya14busa/action-depup@v1
+        id: depup
         with:
-          # scope: repo:status
-          token: ${{ secrets.MATZBOT_GITHUB_TOKEN }}
+          file: Dockerfile
+          version_name: REVIEWDOG_VERSION
+          repo: reviewdog/reviewdog
+
+      - name: Create Pull Request to update reviewdog
+        uses: peter-evans/create-pull-request@v5
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          title: "chore(deps): update reviewdog to ${{ steps.depup.outputs.latest }}"
+          commit-message: "chore(deps): update reviewdog to ${{ steps.depup.outputs.latest }}"
