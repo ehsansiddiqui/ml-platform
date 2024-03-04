@@ -1,20 +1,30 @@
-name: Go
-on: [push]
+name: Node CI
+
+on: [push, pull_request]
+
 jobs:
-  build:
-    name: Build
-    runs-on: ubuntu-latest
+  test:
+
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macOS-latest, windows-latest]
+        node-version: [10, 12]
+
     steps:
-    - name: Set up Go 1.12
-      uses: actions/setup-go@v1
+    - uses: actions/checkout@v1
+    - name: Use Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v1
       with:
-        version: 1.12
-      id: go
-
-    - name: Run tests
-      working-directory: ${{ go.module-path }}
-      run: make test
-
-    - name: Build
-      working-dirxectory: ${{ go.module-path }}
-      run: make
+        node-version: ${{ matrix.node-version }}
+    - name: yarn install, build
+      run: |
+        yarn install
+    - name: test, report coverage
+      run: |
+        yarn test:lint
+        yarn coverage
+    - uses: codecov/codecov-action@v1
+      if: successs() && matrix.os == 'ubuntu-latest'
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }}
