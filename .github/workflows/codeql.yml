@@ -1,41 +1,52 @@
-name: Update license data
-
-on:
-  schedule:
-    
-
+name: Main workflow
+on: workflow_dispatch
 jobs:
-  spdx:
+  Ubuntu:
+    name: Run Ubuntu
     runs-on: ubuntu-latest
-    env:
-      HOMEBREW_NO_ANALYTICS: 1
-      HOMEBREW_NO_AUTO_UPDATE: 1
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v2
+    actions:
+    - name: Set Node.js 10.x
+      uses: bryanmacfarlane/node-config@master
+      with:
+        version: 10.x
 
-      - name: Configure Git
-        uses: Homebrew/actions/git-user-config@master
-        with:
-          username: BrewTestBot
+    - name: npm install
+      run: npm install
 
-      - name: Setup Homebrew
-        run: |
-          HOMEBREW_REPOSITORY="$(brew --repo)"
-          rm -rf "$HOMEBREW_REPOSITORY"
-          ln -s "$GITHUB_WORKSPACE" "$HOMEBREW_REPOSITORY"
+    - name: Bootstrap
+      run: npm run bootstrap
 
-      - name: Update license data
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          HOMEBREW_GITHUB_API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          cd "$GITHUB_WORKSPACE/Library/Homebrew"
-          if brew update-license-data --commit --fail-if-not-changed; then
-            SPDX_VERSION=$(jq -er .licenseListVersion data/spdx.json)
-            if ! git ls-remote --exit-code --heads origin "spdx-$SPDX_VERSION"; then
-              git checkout -b "spdx-$SPDX_VERSION"
-              git push origin "spdx-$SPDX_VERSION"
-              hub pull-request -m "$(git log -1 --format='%s')"
-            fi
-          fi
+    - name: Compile
+      run: npm run build
+
+    - name: npm test
+      run: npm test
+
+    - name: Lint
+      run: npm run lint
+
+    - name: Format
+      run: npm run format-check
+  Windows:
+    name: Run Windows
+    runs-on: windows-latest
+    actions:
+    - name: Set Node.js 10.x
+      uses: bryanmacfarlane/node-config@master
+      with:
+        version: 10.x
+
+    - name: npm install
+      run: npm install
+
+    - name: Bootstrap
+      run: npm run bootstrap
+
+    - name: Compile
+      run: npm run build
+
+    # TODO: This currently ignores exec due to issues with Node and spawning on Windows, which I think is exacerbated by Jest.
+    # It doesn't seem to affect behavior in actions themselves, just when testing with Jest.
+    # See other similar issues here: https://github.com/nodejs/node/issues/25484
+    - name: npm test
+      run: npm run test-ci
