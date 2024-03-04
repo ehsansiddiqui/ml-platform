@@ -10,7 +10,7 @@ jobs:
           - ubuntu-20.04
 #         - ubuntu-18.04
 #         - ubuntu-16.04
-        debug: [-DRUBY_DEBUG=1]
+        debug: [-DRUBY_DEBUG]
         exclude:
           - test_task: test-bundler-parallel
             os: ubuntu-16.04
