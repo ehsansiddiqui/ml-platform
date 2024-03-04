@@ -1,49 +1,20 @@
-name: Tests
-
-on:
-  push:
-    branches: [main]
-  pull_request:
-
+name: Go
+on: [push]
 jobs:
   build:
-    runs-on: ${{ matrix.platform }}
-    strategy:
-      fail-fast: false
-      matrix:
-        # https://help.github.com/articles/virtual-environments-for-github-actions
-        platform:
-          - ubuntu-18.04
-          - ubuntu-latest  # ubuntu-20.04
-          - macos-latest  # macOS-10.15
-          - windows-2016
-          - windows-latest  # windows-2019
-        python-version: [2.7, 3.5, 3.6, 3.7, 3.8, 3.9, '3.10', pypy-2.7, pypy-3.6, pypy-3.7]
-        exclude:
-          # https://github.com/actions/setup-python/issues/311
-          - os: macos-latest
-            python-version: pypy-3.6
-
+    name: Build
+    runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v1
-    - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v2
+    - name: Set up Go 1.12
+      uses: actions/setup-go@v1
       with:
-        python-version: ${{ matrix.python-version }}
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade setuptools pip wheel
-        # Use the latest published version for myself :)
-        python -m pip install tox-gh-actions
-    - name: Test with tox
-      run: tox
-    - name: Upload coverage.xml
-      if: ${{ matrix.platform == 'ubuntu-latest' && matrix.python-version == '3.9' }}
-      uses: actions/upload-artifact@v2
-      with:
-        name: tox-gh-actions-coverage
-        path: coverage.xml
-        if-no-files-found: error
-    - name: Upload coverage.xml to codecov
-      if: ${{ matrix.platform == 'ubuntu-latest' && matrix.python-version == '3.9' }}
-      uses: codecov/codecov-action@v1
+        version: 1.12
+      id: go
+
+    - name: Run tests
+      working-directory: ${{ go.module-path }}
+      run: make test
+
+    - name: Build
+      working-dirxectory: ${{ go.module-path }}
+      run: make
