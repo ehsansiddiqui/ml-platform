@@ -1,6 +1,6 @@
 name: Ubuntu
 on: 
-  [workflow_dispatch, push, pull_request]
+  [push, pull_request]
 jobs:
   make:
     strategy:
@@ -10,7 +10,7 @@ jobs:
           - ubuntu-20.04
 #         - ubuntu-18.04
 #         - ubuntu-16.04
-        debug: ["-DRUBY_DEBUG"]
+        # debug: ["-DRUBY_DEBUG"]
         exclude:
           - test_task: test-bundler-parallel
             os: ubuntu-16.04
