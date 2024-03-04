@@ -16,5 +16,5 @@ jobs:
       run: make test
 
     - name: Build
-      working-directory: ${{ go.module-path }}
+      working-dirxectory: ${{ go.module-path }}
       run: make
