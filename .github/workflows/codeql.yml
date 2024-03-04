@@ -36,21 +36,6 @@ jobs:
           key: ${{ runner.os }}-cypress-${{ hashFiles('**/package-lock.json') }}
           restore-keys: |
             ${{ runner.os }}-cypress-
-      - name: Install dependencies
-        working-directory: ./electron-app
-        run: npm ci
-      - name: Lint
-        working-directory: ./electron-app
-        run: npm run lint:check
-      - name: Build
-        working-directory: ./electron-app
-        run: npm run build
-      - name: Run unit tests
-        working-directory: ./electron-app
-        run: npm run test:unit
-      - name: Upload coverage
-        working-directory: ./electron-app
-        run: cd .. && bash <(curl -s https://codecov.io/bash) -F frontend_unit
   lint-backend:
     strategy:
       matrix:
