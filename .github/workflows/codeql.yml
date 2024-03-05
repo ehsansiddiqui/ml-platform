@@ -6,7 +6,7 @@ on:
         description: Crate to release
         required: true
         type: choice
-        options:
+        choices:
           - cli
           - lib
           - filterer-globset
