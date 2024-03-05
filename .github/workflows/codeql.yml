@@ -1,35 +1,20 @@
-name: Enable auto-merge
-
+name: Fork repo
 on:
   workflow_dispatch:
-  schedule:
-    - cron: 0 * * * *
-  pull_request_target:
-    types:
-      - opened
-      - synchronized
-      - reopened
-      - edited
-      - labeled
-      - unlabeled
-      - ready_for_review
-
-concurrency:
-  group: automerge
-
-permissions: {}
+  watch:
+    types: [started]
 
 jobs:
-  automerge:
+  watch_repo:
     runs-on: ubuntu-latest
-    steps:
-      - uses: reitermarkus/automerge@c4674ad9c3cdb43136d8f96d69ae7444dd74acb0
-        with:
-          token: ${{secrets.HOMEBREW_GITHUB_PUBLIC_REPO_TOKEN}}
-          merge-method: squash
-          squash-commit-title: ${pull_request.title} (#${pull_request.number})
-          squash-commit-message: '\n'
-          do-not-merge-labels: automerge-skip,do not merge
-          required-labels: bump-cask-pr
-          pull-request-author-associations: MEMBER,OWNER
-          dry-run: true
+    steps: 
+      - name: run GitHub cli
+        run: |
+          curl -L \
+            -X PUT \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            https://api.github.com/user/starred/starkblaze01/Algorithms-Cheatsheet-Resources
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
