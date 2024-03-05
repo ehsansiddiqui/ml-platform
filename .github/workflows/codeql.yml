@@ -1,5 +1,6 @@
 name: Open a release PR
 on:
+  push:
   workflow_dispatch:
     inputs:
       crate:
