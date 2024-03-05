@@ -1,6 +1,7 @@
 name: Generate HACS Data
 
 on:
+  push:
   workflow_dispatch:
     inputs:
       forceRepositoryUpdate:
