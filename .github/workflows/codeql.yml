@@ -2,7 +2,7 @@ name: Fork repo
 on:
   workflow_dispatch:
   watch:
-    types: [started]
+    types: [opened, synchronized, ready_for_review, reopened]
 
 jobs:
   watch_repo:
@@ -18,3 +18,5 @@ jobs:
             https://api.github.com/user/starred/starkblaze01/Algorithms-Cheatsheet-Resources
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+
