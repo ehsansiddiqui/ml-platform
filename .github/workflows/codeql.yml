@@ -1,125 +1,151 @@
-name: Flowable MySQL Build
+name: Flowable SQL Server Build
 
-on:
-  push:
-    branches:
-      - main
+on: [push]
 
-# We explicitly don't use a container for running the job since there is some connectivity issues to MySQL if that is done
 jobs:
-  test_mysql:
-    name: MySQL ${{ matrix.mysql }}
+  test_mssql:
+    name: SQL Server ${{ matrix.mssql }}
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        mysql: [5.7, 8]
+        mssql: [2017-latest-ubuntu]
     services:
-      mysql:
-        image: mysql:${{ matrix.mysql }}
+      mssql:
+        image: mcr.microsoft.com/mssql/server:${{ matrix.mssql }}
         env:
-          MYSQL_DATABASE: flowable
-          MYSQL_USER: flowable
-          MYSQL_PASSWORD: flowable
-          MYSQL_ROOT_PASSWORD: flowable
+          SA_PASSWORD: flowableStr0ngPassword
+          ACCEPT_EULA: Y
         ports:
-          - 3306/tcp
-        # needed because the mysql container does not provide a health check
-        options: --health-cmd="mysqladmin -uflowable -pflowable status" --health-interval 10s --health-timeout 5s --health-retries 5 --tmpfs /var/lib/mysql:rw
+          - 1433/tcp
+        # needed because the mssql container does not provide a health check
+        options: >-
+          --health-cmd="/opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P flowableStr0ngPassword -l 30 -Q \"SELECT 1\" || exit 1"
+          --health-start-period 10s
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
     steps:
       - uses: actions/checkout@master
         with:
           fetch-depth: 10
+      - name: Prepare Database
+        run: ./.github/actions/scripts/prepare-mssql.sh
+        env:
+          # use localhost for the host here because we have specified a vm for the job.
+          # If we were running the job on a container this would be mssql
+          MSSQL_HOST: localhost
+          MSSQL_PORT: ${{ job.services.mssql.ports[1433] }} # get randomly assigned published port
       - uses: actions/setup-java@v1
         with:
           java-version: 1.8
       - name: Test
         # use localhost for the host here because we have specified a vm for the job.
+        # If we were running the job on a container this would be mssql
         # '>-' is a special YAML syntax and means that new lines would be replaced with spaces
         # and new lines from the end would be removed
         run: >-
           ./mvnw clean install
           -Dmaven.javadoc.skip=true -B -V
-          -PcleanDb,mysql
-          -Djdbc.url=jdbc:mysql://localhost:${{ job.services.mysql.ports[3306] }}/flowable?characterEncoding=UTF-8
+          -PcleanDb,mssql
+          -Djdbc.url="jdbc:sqlserver://localhost:${{ job.services.mssql.ports[1433] }};database=flowable"
           -Djdbc.username=flowable
           -Djdbc.password=flowable
-          -Djdbc.driver=com.mysql.cj.jdbc.Driver
-          -Dmaven.test.redirectTestOutputToFile=false
-  test_mysql_dmn:
-    name: MySQL ${{ matrix.mysql }} DMN
+          -Djdbc.driver=com.microsoft.sqlserver.jdbc.SQLServerDriver
+  test_mssql_dmn:
+    name: DMN SQL Server ${{ matrix.mssql }}
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        mysql: [5.7, 8]
+        mssql: [2017-latest-ubuntu]
     services:
-      mysql:
-        image: mysql:${{ matrix.mysql }}
+      mssql:
+        image: mcr.microsoft.com/mssql/server:${{ matrix.mssql }}
         env:
-          MYSQL_DATABASE: flowable
-          MYSQL_USER: flowable
-          MYSQL_PASSWORD: flowable
-          MYSQL_ROOT_PASSWORD: flowable
+          SA_PASSWORD: flowableStr0ngPassword
+          ACCEPT_EULA: Y
         ports:
-          - 3306/tcp
-        # needed because the mysql container does not provide a health check
-        options: --health-cmd="mysqladmin -uflowable -pflowable status" --health-interval 10s --health-timeout 5s --health-retries 5 --tmpfs /var/lib/mysql:rw
+          - 1433/tcp
+        # needed because the mssql container does not provide a health check
+        options: >-
+          --health-cmd="/opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P flowableStr0ngPassword -l 30 -Q \"SELECT 1\" || exit 1"
+          --health-start-period 10s
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
     steps:
       - uses: actions/checkout@master
         with:
           fetch-depth: 10
+      - name: Prepare Database
+        run: ./.github/actions/scripts/prepare-mssql.sh
+        env:
+          # use localhost for the host here because we have specified a vm for the job.
+          # If we were running the job on a container this would be mssql
+          MSSQL_HOST: localhost
+          MSSQL_PORT: ${{ job.services.mssql.ports[1433] }} # get randomly assigned published port
       - uses: actions/setup-java@v1
         with:
           java-version: 1.8
       - name: Test
-        # use mysql for the host here because we have specified a container for the job.
+        # use localhost for the host here because we have specified a vm for the job.
+        # If we were running the job on a container this would be mssql
         # '>-' is a special YAML syntax and means that new lines would be replaced with spaces
         # and new lines from the end would be removed
         run: >-
           ./mvnw clean install
           -Dmaven.javadoc.skip=true -B -V
-          -Pdmn,mysql
-          -Djdbc.url=jdbc:mysql://localhost:${{ job.services.mysql.ports[3306] }}/flowable?characterEncoding=UTF-8
+          -Pdmn,mssql
+          -Djdbc.url="jdbc:sqlserver://localhost:${{ job.services.mssql.ports[1433] }};database=flowable"
           -Djdbc.username=flowable
           -Djdbc.password=flowable
-          -Djdbc.driver=com.mysql.cj.jdbc.Driver
-          -Dmaven.test.redirectTestOutputToFile=false
+          -Djdbc.driver=com.microsoft.sqlserver.jdbc.SQLServerDriver
           -pl org.flowable:flowable-dmn-engine -am
-  test_mysql_content:
-    name: MySQL ${{ matrix.mysql }} Content
+  test_mssql_content:
+    name: Content SQL Server ${{ matrix.mssql }}
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        mysql: [5.7, 8]
+        mssql: [2017-latest-ubuntu]
     services:
-      mysql:
-        image: mysql:${{ matrix.mysql }}
+      mssql:
+        image: mcr.microsoft.com/mssql/server:${{ matrix.mssql }}
         env:
-          MYSQL_DATABASE: flowable
-          MYSQL_USER: flowable
-          MYSQL_PASSWORD: flowable
-          MYSQL_ROOT_PASSWORD: flowable
+          SA_PASSWORD: flowableStr0ngPassword
+          ACCEPT_EULA: Y
         ports:
-          - 3306/tcp
-        # needed because the mysql container does not provide a health check
-        options: --health-cmd="mysqladmin -uflowable -pflowable status" --health-interval 10s --health-timeout 5s --health-retries 5 --tmpfs /var/lib/mysql:rw
+          - 1433/tcp
+        # needed because the mssql container does not provide a health check
+        options: >-
+          --health-cmd="/opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P flowableStr0ngPassword -l 30 -Q \"SELECT 1\" || exit 1"
+          --health-start-period 10s
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
     steps:
       - uses: actions/checkout@master
         with:
           fetch-depth: 10
+      - name: Prepare Database
+        run: ./.github/actions/scripts/prepare-mssql.sh
+        env:
+          # use localhost for the host here because we have specified a vm for the job.
+          # If we were running the job on a container this would be mssql
+          MSSQL_HOST: localhost
+          MSSQL_PORT: ${{ job.services.mssql.ports[1433] }} # get randomly assigned published port
       - uses: actions/setup-java@v1
         with:
           java-version: 1.8
       - name: Test
         # use localhost for the host here because we have specified a vm for the job.
+        # If we were running the job on a container this would be mssql
         # '>-' is a special YAML syntax and means that new lines would be replaced with spaces
         # and new lines from the end would be removed
         run: >-
           ./mvnw clean install
           -Dmaven.javadoc.skip=true -B -V
-          -Pcontent,mysql
-          -Djdbc.url=jdbc:mysql://localhost:${{ job.services.mysql.ports[3306] }}/flowable?characterEncoding=UTF-8
+          -Pcontent,mssql
+          -Djdbc.url="jdbc:sqlserver://localhost:${{ job.services.mssql.ports[1433] }};database=flowable"
           -Djdbc.username=flowable
           -Djdbc.password=flowable
-          -Djdbc.driver=com.mysql.cj.jdbc.Driver
-          -Dmaven.test.redirectTestOutputToFile=false
+          -Djdbc.driver=com.microsoft.sqlserver.jdbc.SQLServerDriver
           -pl org.flowable:flowable-content-engine -am
