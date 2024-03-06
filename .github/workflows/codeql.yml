@@ -1,50 +1,125 @@
-name: Release
+name: Release job
 
-on: [push,release]
+on: workflow_dispatch
 
 jobs:
-  release:
+  linux_release:
     runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@master
-      - name: Set up JDK 1.8
-        uses: actions/setup-java@v1
-        with:
-          version: 1.8
-      - name: Build release
-        run: ./gradlew build final -Prelease.useLastTag=true
-        env:
-          BINTRAY_USER: ${{ secrets.BINTRAY_USER }}
-          BINTRAY_KEY: ${{ secrets.BINTRAY_KEY }}
+    timeout-minutes: 30
 
-  site:
-    needs: release
     steps:
-      - name: Checkout
-        uses: actions/checkout@master
-      - name: Set up JDK 1.8
-        uses: actions/setup-java@v1
+      - uses: actions/checkout@master
+      - name: get-npm-version
+        id: package-version
+        uses: action-get-npm-version@1.1.1
+      - name: Use Node.js 18
+        uses: actions/setup-node@master
         with:
-          version: 1.8
-      - name: Build site
-        run: ./gradlew :site:orchidBuild -Prelease.useLastTag=true -Penv=prod
-      - name: Publish site
-        uses: maxheld83/ghpages@v0.2.1
+          version: 18
+          cache: npm
+      - run: npm ci
+      - run: npm run build:linux
+        shell: bash
         env:
-          BUILD_DIR: site/build/docs/orchid/
-          GH_PAT: ${{ secrets.GH_PAT }}
+          VERSION: ${{ steps.package-version.outputs.version }}
+      - name: Upload binaries
+        uses: actions/upload-artifact@v2
+        with:
+          name: nuclear-binaries-linux
+          path: release/*.*
+      - name: Create a release
+        uses: softprops/action-gh-release@v1
+        with:
+          name: v${{ steps.package-version.outputs.version }}
+          tag_name: v${{ steps.package-version.outputs.version }}
+          prerelease: true
+          files: release/*.*
+      - name: Inform AUR updater
+        uses: peter-evans/repository-dispatch@v1
+        with:
+          repository: NuclearPlayer/nuclear-nightly-aur
+          token: ${{ secrets.REPO_ACCESS_TOKEN }}
+          event-type: release
+          client-payload: '{"tag": "v${{ steps.package-version.outputs.version }}"}'
+      - name: Inform Snapcraft updater
+        uses: peter-evans/repository-dispatch@v1
+        with:
+          repository: NuclearPlayer/nuclear-nightly-snapcraft
+          token: ${{ secrets.REPO_ACCESS_TOKEN }}
+          event-type: release
+          client-payload: '{"tag": "v${{ steps.package-version.outputs.version }}"}'
+      - name: Inform Flatpak updater
+        uses: peter-evans/repository-dispatch@v1
+        with:
+          repository: NuclearPlayer/nuclear-nightly-flatpak
+          token: ${{ secrets.REPO_ACCESS_TOKEN }}
+          event-type: release
+          client-payload: '{"tag": "v${{ steps.package-version.outputs.version }}"}'
 
-  announce:
-    needs: release
+  mac_release:
+    runs-on: macos-11
+    timeout-minutes: 30
+
     steps:
-      - name: Tweet message
-        uses: xorilog/twitter-action@0.2
-        args:
-          - -message
-          - "Strikt ${{ github.event.release.tag_name }} ${{ github.event.release.name }} is available. https://strikt.io\n\nRelease notes: https://github.com/${{ github.repository }}/releases/${{ github.event.release.tag_name }}"
+      - uses: actions/checkout@master
+      - name: get-npm-version
+        id: package-version
+        uses: action-get-npm-version@1.1.1
+      - name: Use Node.js 18
+        uses: actions/setup-node@master
+        with:
+          version: 18
+          cache: npm
+      - run: npm ci
+      - run: npm run build:macos
+        shell: bash
         env:
-          TWITTER_CONSUMER_KEY: ${{ secrets.TWITTER_CONSUMER_KEY }}
-          TWITTER_CONSUMER_SECRET: ${{ secrets.TWITTER_CONSUMER_SECRET }}
-          TWITTER_ACCESS_TOKEN: ${{ secrets.TWITTER_ACCESS_TOKEN }}
-          TWITTER_ACCESS_SECRET: ${{ secrets.TWITTER_ACCESS_SECRET }}
+          VERSION: ${{ steps.package-version.outputs.version }}
+      - name: Upload binaries
+        uses: actions/upload-artifact@v2
+        with:
+          name: nuclear-binaries-mac
+          path: release/*.*
+      - name: Create a release
+        uses: softprops/action-gh-release@v1
+        with:
+          name: v${{ steps.package-version.outputs.version }}
+          tag_name: v${{ steps.package-version.outputs.version }}
+          prerelease: true
+          files: release/*.*
+
+  windows_release:
+    runs-on: windows-latest
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@master
+      - name: get-npm-version
+        id: package-version
+        uses: action-get-npm-version@1.1.1
+      - name: Use Node.js 18
+        uses: actions/setup-node@master
+        with:
+          version: 18
+          cache: npm
+      - name: add git binaries to PATH
+        run: |
+          echo "C:\Program Files\Git\usr\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+          echo "C:\Program Files\Git\mingw64\libexec\git-core" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+      - run: npm ci
+      - run: npm run build:windows
+        shell: bash
+        env:
+          VERSION: ${{ steps.package-version.outputs.version }}
+      - name: Upload binaries
+        uses: actions/upload-artifact@v2
+        with:
+          name: nuclear-binaries-windows
+          path: release/*.*
+      - name: Create a release
+        uses: softprops/action-gh-release@v1
+        with:
+          name: v${{ steps.package-version.outputs.version }}
+          tag_name: v${{ steps.package-version.outputs.version }}
+          prerelease: true
+          files: release/*.*
