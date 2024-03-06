@@ -1,125 +1,216 @@
-name: Release job
+name: Main workflow
 
-on: workflow_dispatch
+on:
+  pull_request:
+    paths-ignore:
+      - '**.md'
+  push:
+    branches:
+      - main
+      - releases/*
+    paths-ignore:
+      - '**.md'
 
 jobs:
-  linux_release:
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-
+  build:
+    runs-on: ${{ matrix.operating-system }}
+    strategy:
+      fail-fast: false
+      matrix:
+        operating-system: [ubuntu-latest, windows-latest, macOS-latest]
     steps:
-      - uses: actions/checkout@master
-      - name: get-npm-version
-        id: package-version
-        uses: action-get-npm-version@1.1.1
-      - name: Use Node.js 18
-        uses: actions/setup-node@master
+    - name: Checkout
+      uses: actions/checkout@v2
+    - name: Set Node.js 16
+      uses: actions/setup-node@v1
+      with:
+        node-version: 16.x
+        cache: npm
+    - run: npm ci
+    - run: npm run build
+    - run: npm run format-check
+    - run: npm test
+    - name: Verify no unstaged changes
+      if: runner.os != 'windows'
+      run: __tests__/verify-no-unstaged-changes.sh
+  
+  test-setup-multiple-versions:
+    runs-on: ${{ matrix.operating-system }}
+    strategy:
+      fail-fast: false
+      matrix:
+        operating-system: [ubuntu-latest, windows-latest, macOS-latest]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Clear toolcache
+        shell: pwsh
+        run: __tests__/clear-toolcache.ps1 ${{ runner.os }}
+      - name: Setup dotnet 2.2.402 and 3.1.404
+        uses: ./
         with:
-          version: 18
-          cache: npm
-      - run: npm ci
-      - run: npm run build:linux
-        shell: bash
+          dotnet-version: |
+             2.2.402
+             3.1.404
+             3.0.x
+      - name: Verify dotnet
+        shell: pwsh
+        run: __tests__/verify-dotnet.ps1 2.2.402 3.1.404 '3.0'
+
+  test-setup-full-version:
+    runs-on: ${{ matrix.operating-system }}
+    strategy:
+      fail-fast: false
+      matrix:
+        operating-system: [ubuntu-latest, windows-latest, macOS-latest]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Clear toolcache
+        shell: pwsh
+        run: __tests__/clear-toolcache.ps1 ${{ runner.os }}
+      # Side-by-side install of 2.2 and 3.1 used for the test project
+      - name: Setup dotnet 2.2.402
+        uses: ./
+        with:
+          dotnet-version: 2.2.402
+      - name: Setup dotnet 3.1.201
+        uses: ./
+        with:
+          dotnet-version: 3.1.201
+          # We are including this veriable to force the generation of the nuget config file to verify that it is created in the correct place
+          source-url: https://api.nuget.org/v3/index.json
         env:
-          VERSION: ${{ steps.package-version.outputs.version }}
-      - name: Upload binaries
-        uses: actions/upload-artifact@v2
-        with:
-          name: nuclear-binaries-linux
-          path: release/*.*
-      - name: Create a release
-        uses: softprops/action-gh-release@v1
-        with:
-          name: v${{ steps.package-version.outputs.version }}
-          tag_name: v${{ steps.package-version.outputs.version }}
-          prerelease: true
-          files: release/*.*
-      - name: Inform AUR updater
-        uses: peter-evans/repository-dispatch@v1
-        with:
-          repository: NuclearPlayer/nuclear-nightly-aur
-          token: ${{ secrets.REPO_ACCESS_TOKEN }}
-          event-type: release
-          client-payload: '{"tag": "v${{ steps.package-version.outputs.version }}"}'
-      - name: Inform Snapcraft updater
-        uses: peter-evans/repository-dispatch@v1
-        with:
-          repository: NuclearPlayer/nuclear-nightly-snapcraft
-          token: ${{ secrets.REPO_ACCESS_TOKEN }}
-          event-type: release
-          client-payload: '{"tag": "v${{ steps.package-version.outputs.version }}"}'
-      - name: Inform Flatpak updater
-        uses: peter-evans/repository-dispatch@v1
-        with:
-          repository: NuclearPlayer/nuclear-nightly-flatpak
-          token: ${{ secrets.REPO_ACCESS_TOKEN }}
-          event-type: release
-          client-payload: '{"tag": "v${{ steps.package-version.outputs.version }}"}'
-
-  mac_release:
-    runs-on: macos-11
-    timeout-minutes: 30
-
-    steps:
-      - uses: actions/checkout@master
-      - name: get-npm-version
-        id: package-version
-        uses: action-get-npm-version@1.1.1
-      - name: Use Node.js 18
-        uses: actions/setup-node@master
-        with:
-          version: 18
-          cache: npm
-      - run: npm ci
-      - run: npm run build:macos
-        shell: bash
-        env:
-          VERSION: ${{ steps.package-version.outputs.version }}
-      - name: Upload binaries
-        uses: actions/upload-artifact@v2
-        with:
-          name: nuclear-binaries-mac
-          path: release/*.*
-      - name: Create a release
-        uses: softprops/action-gh-release@v1
-        with:
-          name: v${{ steps.package-version.outputs.version }}
-          tag_name: v${{ steps.package-version.outputs.version }}
-          prerelease: true
-          files: release/*.*
-
-  windows_release:
-    runs-on: windows-latest
-    timeout-minutes: 30
-
-    steps:
-      - uses: actions/checkout@master
-      - name: get-npm-version
-        id: package-version
-        uses: action-get-npm-version@1.1.1
-      - name: Use Node.js 18
-        uses: actions/setup-node@master
-        with:
-          version: 18
-          cache: npm
-      - name: add git binaries to PATH
+          NUGET_AUTH_TOKEN: NOTATOKEN
+      - name: Verify nuget config file
+        shell: pwsh
         run: |
-          echo "C:\Program Files\Git\usr\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
-          echo "C:\Program Files\Git\mingw64\libexec\git-core" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
-      - run: npm ci
-      - run: npm run build:windows
-        shell: bash
+          if (-Not (Test-Path "../nuget.config")) { throw "nuget file not generated correctly" }
+      - name: Verify dotnet
+        shell: pwsh
+        run: __tests__/verify-dotnet.ps1 3.1.201 2.2.402
+
+  test-setup-without-patch-version:
+    runs-on: ${{ matrix.operating-system }}
+    strategy:
+      fail-fast: false
+      matrix:
+        operating-system: [ubuntu-latest, windows-latest, macOS-latest]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Clear toolcache
+        shell: pwsh
+        run: __tests__/clear-toolcache.ps1 ${{ runner.os }}
+      # 2.0, 3.0, 5.0 needs to be in single quotes to interpret as a string instead of as an integer
+      - name: Setup dotnet '3.1'
+        uses: ./
+        with:
+          dotnet-version: '3.1'
+      - name: Setup dotnet '2.2'
+        uses: ./
+        with:
+          dotnet-version: '2.2'
+      - name: Verify dotnet
+        shell: pwsh
+        run: __tests__/verify-dotnet.ps1 3.1 2.2
+  
+  test-setup-latest-patch-version:
+    runs-on: ${{ matrix.operating-system }}
+    strategy:
+      fail-fast: false
+      matrix:
+        operating-system: [ubuntu-latest, windows-latest, macOS-latest]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Clear toolcache
+        shell: pwsh
+        run: __tests__/clear-toolcache.ps1 ${{ runner.os }}
+      - name: Setup dotnet 3.1.x
+        uses: ./
+        with:
+          dotnet-version: 3.1.x
+      - name: Setup dotnet 2.2.x
+        uses: ./
+        with:
+          dotnet-version: 2.2.x
+      - name: Verify dotnet
+        shell: pwsh
+        run: __tests__/verify-dotnet.ps1 3.1 2.2
+
+  test-setup-with-wildcard:
+    runs-on: ${{ matrix.operating-system }}
+    strategy:
+      fail-fast: false
+      matrix:
+        operating-system: [ubuntu-latest, windows-latest, macOS-latest]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Clear toolcache
+        shell: pwsh
+        run: __tests__/clear-toolcache.ps1 ${{ runner.os }}
+      - name: Setup dotnet 3.1.*
+        uses: ./
+        with:
+          dotnet-version: 3.1.*
+      - name: Setup dotnet 2.2.*
+        uses: ./
+        with:
+          dotnet-version: 2.2.*
+      - name: Verify dotnet
+        shell: pwsh
+        run: __tests__/verify-dotnet.ps1 3.1 2.2
+
+  test-proxy:
+    runs-on: ubuntu-latest
+    container:
+      image: mcr.microsoft.com/dotnet/core/runtime-deps:3.0-bionic
+      options: --dns 127.0.0.1
+    services:
+      squid-proxy:
+        image: datadog/squid:latest
+        ports:
+          - 3128:3128
+    env:
+      https_proxy: http://squid-proxy:3128
+      http_proxy: http://squid-proxy:3128
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Clear tool cache
+        run: rm -rf "/usr/share/dotnet"
+      - name: Install curl
+        run: |
+          apt update
+          apt -y install curl
+      - name: Setup dotnet 3.1.201
+        uses: ./
+        with:
+          dotnet-version: 3.1.201
+          source-url: https://api.nuget.org/v3/index.json
         env:
-          VERSION: ${{ steps.package-version.outputs.version }}
-      - name: Upload binaries
-        uses: actions/upload-artifact@v2
+          NUGET_AUTH_TOKEN: NOTATOKEN
+      - name: Verify dotnet
+        run: __tests__/verify-dotnet.sh 3.1.201
+
+  test-bypass-proxy:
+    runs-on: ubuntu-latest
+    env:
+      https_proxy: http://no-such-proxy:3128
+      no_proxy: github.com,dotnetcli.blob.core.windows.net,download.visualstudio.microsoft.com,api.nuget.org,dotnetcli.azureedge.net
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Clear tool cache
+        run: rm -rf "/usr/share/dotnet"
+      - name: Setup dotnet 3.1.201
+        uses: ./
         with:
-          name: nuclear-binaries-windows
-          path: release/*.*
-      - name: Create a release
-        uses: softprops/action-gh-release@v1
-        with:
-          name: v${{ steps.package-version.outputs.version }}
-          tag_name: v${{ steps.package-version.outputs.version }}
-          prerelease: true
-          files: release/*.*
+          dotnet-version: 3.1.201
+          source-url: https://api.nuget.org/v3/index.json
+        env:
+          NUGET_AUTH_TOKEN: NOTATOKEN
+      - name: Verify dotnet
+        run: __tests__/verify-dotnet.sh 3.1.201
