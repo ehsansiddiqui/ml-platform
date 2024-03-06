@@ -4,7 +4,7 @@ on: [push]
 
 jobs:
   test_db2:
-    name: DB2 ${{ matrix.db2 }}
+    name: DB2 
     runs-on: ubuntu-latest
     container: openjdk:8
     
