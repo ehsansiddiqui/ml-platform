@@ -1,130 +1,71 @@
-name: Generate HACS Data
+name: Node CI
 
-on:
-  workflow_call:
-    inputs:
-      forceRepositoryUpdate:
-        description: 'Force repository update'
-        required: false
-        default: 'False'
-        type: choice
-        options:
-          - "False"
-          - "True"
-      category:
-        description: 'Select a category'
-        required: false
-        type: choice
-        default: ""
-        options:
-          - appdaemon
-          - integration
-          - plugin
-          - python_script
-          - template
-          - theme
-  schedule:
-    - cron: "0 */2 * * *"
-
-concurrency:
-  group: category-data
+on: [push]
 
 jobs:
-  generate-matrix:
-    name: Generate matrix
-    runs-on: ubuntu-latest
-    if: github.repository == 'hacs/integration'
-    outputs:
-      categories: ${{ steps.set-matrix.outputs.categories }}
+  test:
+    name: Test on node ${{ matrix.node_version }} and ${{ matrix.os }} with Postgres ${{ matrix.postgres_version }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        node_version: [10]
+        os: [ubuntu-latest]
+        postgres_version: [12, 11, 10]
+    services:
+      postgres:
+        image: postgres:${{ matrix.postgres_version }}
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports:
+        # will assign a random free host port
+        - 5432/tcp
+        # needed because the postgres container does not provide a healthcheck
+        options: --health-cmd pg_isready --health-interval 10s --health-timeout 5s --health-retries 5
     steps:
-      - id: set-matrix
-        run: |
-          if [[ "${{ github.event_name }}" == "workflow_dispatch"  ]] && [[ "${{ inputs.category }}" != ""  ]]; then
-            echo "::set-output name=categories::['${{ inputs.category }}']"
-          else
-            echo "::set-output name=categories::['appdaemon','integration','plugin','python_script','template','theme']"
-          fi
-  category-data:
-    runs-on: ubuntu-latest
-    needs: generate-matrix
-    if: github.repository == 'hacs/integration'
-    name: Generate ${{ matrix.category }} data
+    - uses: actions/checkout@v1
+    - name: Use Node.js ${{ matrix.node_version }}
+      uses: actions/setup-node@v1
+      with:
+        version: ${{ matrix.node_version }}
+    - name: npm install
+      run: npm install
+    - name: Mocha tests
+      run: npm run test:mocha
+      env:
+        PGUSER: postgres
+        PGPASS: postgres
+        PGDATABASE: postgres
+        PGPORT: ${{ job.services.postgres.ports[5432] }}
+    - name: Coveralls Parallel
+      uses: coverallsapp/github-action@master
+      with:
+        github-token: ${{ secrets.github_token }}
+        parallel: true
+    - name: Coveralls Finished
+      uses: coverallsapp/github-action@master
+      with:
+        github-token: ${{ secrets.github_token }}
+        parallel-finished: true
+  lint:
+    name: Static code analysis / Linting
+    runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        category: ${{ fromJSON( needs.generate-matrix.outputs.categories )}}
+        node_version: [10]
+        os: [ubuntu-latest]
+
     steps:
-      - name: Checkout the repository
-        uses: actions/checkout@v3.5.3
+    - uses: actions/checkout@v1
+    - name: Use Node.js ${{ matrix.node_version }}
+      uses: actions/setup-node@v1
+      with:
+        version: ${{ matrix.node_version }}
 
-      - name: Set up Python
-        uses: actions/setup-python@v4.6.1
-        id: python
-        with:
-          python-version: "3.x"
-          cache: 'pip'
-          cache-dependency-path: |
-            requirements_base.txt
-            requirements_generate_data.txt
-
-      - name: Install dependencies
-        run:  |
-          scripts/install/frontend
-          scripts/install/pip_packages --requirement requirements_generate_data.txt
-
-      - name: Generate ${{ matrix.category }} data
-        run: python3 -m scripts.data.generate_category_data ${{ matrix.category }}
-        env:
-          DATA_GENERATOR_TOKEN: ${{ secrets.DATA_GENERATOR_TOKEN }}
-          FORCE_REPOSITORY_UPDATE: ${{ inputs.forceRepositoryUpdate }}
-
-      - name: Check if updated
-        id: updated
-        run: |
-          if test -f "outputdata/${{ matrix.category }}/data.json"; then
-            echo "updated=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "updated=false" >> "$GITHUB_OUTPUT"
-          fi
-
-      - name: Validate output with JQ
-        if: steps.updated.outputs.updated == 'true'
-        run: |
-          jq -c . outputdata/${{ matrix.category }}/data.json
-          jq -c . outputdata/${{ matrix.category }}/repositories.json
-
-      - name: Upload artifacts
-        uses: actions/upload-artifact@v3
-        if: steps.updated.outputs.updated == 'true'
-        with:
-          name: ${{ matrix.category }}
-          path: outputdata/${{ matrix.category }}
-          if-no-files-found: error
-          retention-days: 7
-
-      - name: Upload to R2
-        if: steps.updated.outputs.updated == 'true'
-        run: |
-          aws s3 sync \
-            outputdata/${{ matrix.category }} \
-            s3://data-v2/${{ matrix.category }} \
-            --endpoint-url ${{ secrets.CF_R2_ENDPOINT_DATA }}
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.CF_R2_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.CF_R2_SECRET_ACCESS_KEY }}
-
-      - name: Bust Cloudflare cache
-        if: steps.updated.outputs.updated == 'true'
-        run: |
-          curl --silent --show-error --fail -X POST \
-            "https://api.cloudflare.com/client/v4/zones/${{ secrets.CF_ZONE_ID }}/purge_cache" \
-            -H "Authorization: Bearer ${{ secrets.CF_BUST_CACHE_TOKEN }}" \
-            -H "Content-Type: application/json" \
-            --data '{"files": ["https:\/\/data-v2.hacs.xyz\/${{ matrix.category }}\/data.json", "https:\/\/data-v2.hacs.xyz\/${{ matrix.category }}\/repositories.json"]}'
-
-      - name: Discord notification
-        if: ${{ github.event_name == 'schedule' && failure() }}
-        run: |
-          curl \
-            -H "Content-Type: application/json" \
-            -d '{"username": "GitHub action failure", "content": "[Scheduled action failed!](https://github.com/${{github.repository}}/actions/runs/${{github.run_id}})"}' \
-            ${{ secrets.DISCORD_WEBHOOK_ACTION_FAILURE }}
+    - name: npm install, build and test
+      run: |
+        npm install
+        npm run build --if-present
+        npm run check
