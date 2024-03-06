@@ -11,13 +11,13 @@ on:
         type: string
         default: 'zebra'
       test_id:
-        required: true
+        required: false
         type: string
       test_description:
         required: true
         type: string
       test_variables:
-        required: true
+        required: false
         type: string
       zebra_state_path:
         required: false
@@ -31,11 +31,11 @@ on:
         required: false
         type: string
       needs_zebra_state:
-        required: true
+        required: false
         type: boolean
         default: false
       saves_to_disk:
-        required: true
+        required: false
         type: boolean
       height_grep_text:
         required: false
