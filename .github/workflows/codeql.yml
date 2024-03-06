@@ -1,47 +1,133 @@
-name: Tests (MySQL)
+name: Flowable DB2 Build
 
-on: [ push ]
+on: [push]
 
 jobs:
-  test:
-    strategy:
-      fail-fast: false
-      matrix:
-        php: [ "8.0", "8.1", "8.2" ]
-        composer-dependency: [ prefer-stable, prefer-lowest ]
-        exclude:
-          - php: "8.1"
-            composer-dependency: prefer-lowest
-          - php: "8.2"
-            composer-dependency: prefer-lowest
-
-    name: "PHP ${{ matrix.php }}"
+  test_db2:
+    name: DB2 ${{ matrix.db2 }}
     runs-on: ubuntu-latest
+    container: openjdk:8
+    strategy:
+      matrix:
+        db2: ["11.5.0.0a"]
     services:
-      database:
-        image: mariadb:10.6
+      db2:
+        image: ibmcom/db2:${{ matrix.db2 }}
         env:
-          MYSQL_DATABASE: web
-          MYSQL_USER: web
-          MYSQL_PASSWORD: web
-          MYSQL_ROOT_PASSWORD: root
+          DB2INST1_PASSWORD: flowable
+          DBNAME: flowable
+          LICENSE: accept
+          ARCHIVE_LOGS: false
+          AUTOCONFIG: false
         ports:
-          - 3306
-        options: --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=5s --health-retries=3
+          - 50000:50000
+        # needed because the db2 container does not provide a health check
+        options: >-
+          --privileged=true
+          --health-cmd="su - db2inst1 -c \"~/sqllib/bin/db2 connect to flowable && ~/sqllib/bin/db2 connect reset\""
+          --health-interval 30s
+          --health-timeout 40s
+          --health-retries 10
     steps:
-      - uses: actions/checkout@v2
-
-      - name: Setup PHP
-        uses: shivammathur/setup-php@v2
+      - uses: actions/checkout@master
         with:
-          php-version: ${{ matrix.php }}
-          coverage: none
-
-      - name: Install dependencies
-        run: composer update --no-interaction --no-scripts --no-suggest --no-progress --prefer-dist --prefer-stable
-
-      - name: Execute tests
-        run: vendor/bin/phpunit
+          fetch-depth: 10
+      - name: Test
+        # use db2 for the host here because we have specified a container for the job.
+        # If we were running the job on the VM this would be localhost
+        # '>-' is a special YAML syntax and means that new lines would be replaced with spaces
+        # and new lines from the end would be removed
+        run: >-
+          ./mvnw clean install
+          -Dmaven.javadoc.skip=true -B -V
+          -PcleanDb,db2
+          -Djdbc.url=jdbc:db2://db2:${{ job.services.db2.ports[50000] }}/flowable
+          -Djdbc.username=db2inst1
+          -Djdbc.password=flowable
+          -Djdbc.driver=com.ibm.db2.jcc.DB2Driver
+  test_db2_dmn:
+    name: DB2 ${{ matrix.db2 }} DMN
+    runs-on: ubuntu-latest
+    container: openjdk:8
+    strategy:
+      matrix:
+        db2: ["11.5.0.0a"]
+    services:
+      db2:
+        image: ibmcom/db2:${{ matrix.db2 }}
         env:
-          DB_PORT: ${{ job.services.database.ports[3306] }}
-          DB_HOST: 127.0.0.1
+          DB2INST1_PASSWORD: flowable
+          DBNAME: flowable
+          LICENSE: accept
+          ARCHIVE_LOGS: false
+          AUTOCONFIG: false
+        ports:
+          - 50000:50000
+        # needed because the db2 container does not provide a health check
+        options: >-
+          --privileged=true
+          --health-cmd="su - db2inst1 -c \"~/sqllib/bin/db2 connect to flowable && ~/sqllib/bin/db2 connect reset\""
+          --health-interval 30s
+          --health-timeout 40s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@master
+        with:
+          fetch-depth: 10
+      - name: Test
+        # use db2 for the host here because we have specified a container for the job.
+        # If we were running the job on the VM this would be localhost
+        # '>-' is a special YAML syntax and means that new lines would be replaced with spaces
+        # and new lines from the end would be removed
+        run: >-
+          ./mvnw clean install
+          -Dmaven.javadoc.skip=true -B -V
+          -Pdmn,db2
+          -Djdbc.url=jdbc:db2://db2:${{ job.services.db2.ports[50000] }}/flowable
+          -Djdbc.username=db2inst1
+          -Djdbc.password=flowable
+          -Djdbc.driver=com.ibm.db2.jcc.DB2Driver
+          -pl org.flowable:flowable-dmn-engine -am
+  test_db2_content:
+    name: DB2 ${{ matrix.db2 }} Content
+    runs-on: ubuntu-latest
+    container: openjdk:8
+    strategy:
+      matrix:
+        db2: ["11.5.0.0a"]
+    services:
+      db2:
+        image: ibmcom/db2:${{ matrix.db2 }}
+        env:
+          DB2INST1_PASSWORD: flowable
+          DBNAME: flowable
+          LICENSE: accept
+          ARCHIVE_LOGS: false
+          AUTOCONFIG: false
+        ports:
+          - 50000:50000
+        # needed because the db2 container does not provide a health check
+        options: >-
+          --privileged=true
+          --health-cmd="su - db2inst1 -c \"~/sqllib/bin/db2 connect to flowable && ~/sqllib/bin/db2 connect reset\""
+          --health-interval 30s
+          --health-timeout 40s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@master
+        with:
+          fetch-depth: 10
+      - name: Test
+        # use db2 for the host here because we have specified a container for the job.
+        # If we were running the job on the VM this would be localhost
+        # '>-' is a special YAML syntax and means that new lines would be replaced with spaces
+        # and new lines from the end would be removed
+        run: >-
+          ./mvnw clean install
+          -Dmaven.javadoc.skip=true -B -V
+          -Pcontent,db2
+          -Djdbc.url=jdbc:db2://db2:${{ job.services.db2.ports[50000] }}/flowable
+          -Djdbc.username=db2inst1
+          -Djdbc.password=flowable
+          -Djdbc.driver=com.ibm.db2.jcc.DB2Driver
+          -pl org.flowable:flowable-content-engine -am
