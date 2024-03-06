@@ -1,109 +1,59 @@
-name: Flowable Postgres Build
+name: Test App (PostgreSQL)
 
-on: [push]
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
 
 jobs:
-  test_postgres:
-    name: Postgres ${{ matrix.postgres }}
+  test:
+    name: Test App (PostgreSQL)
     runs-on: ubuntu-latest
-    container: openjdk:8
-    strategy:
-      matrix:
-        postgres: [9, 10, 11]
+
+    env:
+      DB_CONNECTION: testing_pgsql
+
     services:
       postgres:
-        image: postgres:${{ matrix.postgres }}
+        image: postgres:latest
         env:
-          POSTGRES_PASSWORD: flowable
-          POSTGRES_USER: flowable
+          POSTGRES_USER: freescout-test
+          POSTGRES_PASSWORD: freescout-test
+          POSTGRES_DB: freescout-test
         ports:
           - 5432:5432
-        # needed because the postgres container does not provide a health check
-        options: --health-cmd pg_isready --health-interval 10s --health-timeout 5s --health-retries 5 --tmpfs /var/lib/postgresql/data:rw
-    steps:
-      - uses: actions/checkout@master
-        with:
-          fetch-depth: 10
-      - name: Test
-        # use postgres for the host here because we have specified a container for the job.
-        # If we were running the job on the VM this would be localhost
-        # '>-' is a special YAML syntax and means that new lines would be replaced with spaces
-        # and new lines from the end would be removed
-        run: >-
-          ./mvnw clean install
-          -Dmaven.javadoc.skip=true -B -V
-          -PcleanDb,postgresql
-          -Djdbc.url=jdbc:postgresql://postgres:${{ job.services.postgres.ports[5432] }}/flowable
-          -Djdbc.username=flowable
-          -Djdbc.password=flowable
-          -Djdbc.driver=org.postgresql.Driver
-  test_postgres_dmn:
-    name: Postgres ${{ matrix.postgres }} DMN
-    runs-on: ubuntu-latest
-    container: openjdk:8
+        # Set health checks to wait until postgres has started
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
     strategy:
       matrix:
-        postgres: [9, 10, 11]
-    services:
-      postgres:
-        image: postgres:${{ matrix.postgres }}
-        env:
-          POSTGRES_PASSWORD: flowable
-          POSTGRES_USER: flowable
-        ports:
-          - 5432:5432
-        # needed because the postgres container does not provide a health check
-        options: --health-cmd pg_isready --health-interval 10s --health-timeout 5s --health-retries 5 --tmpfs /var/lib/postgresql/data:rw
+        php: ['7.3', '7.4', '8.0', '8.1', '8.2']
+
     steps:
-      - uses: actions/checkout@master
+      - uses: actions/checkout@v3
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
         with:
-          fetch-depth: 10
-      - name: Test
-        # use postgres for the host here because we have specified a container for the job.
-        # If we were running the job on the VM this would be localhost
-        # '>-' is a special YAML syntax and means that new lines would be replaced with spaces
-        # and new lines from the end would be removed
-        run: >-
-          ./mvnw clean install
-          -Dmaven.javadoc.skip=true -B -V
-          -Pdmn,postgresql
-          -Djdbc.url=jdbc:postgresql://postgres:${{ job.services.postgres.ports[5432] }}/flowable
-          -Djdbc.username=flowable
-          -Djdbc.password=flowable
-          -Djdbc.driver=org.postgresql.Driver
-          -pl org.flowable:flowable-dmn-engine -am
-  test_postgres_content:
-    name: Postgres ${{ matrix.postgres }} Content
-    runs-on: ubuntu-latest
-    container: openjdk:8
-    strategy:
-      matrix:
-        postgres: [9, 10, 11]
-    services:
-      postgres:
-        image: postgres:${{ matrix.postgres }}
+          php-version: ${{ matrix.php }}
+          extensions: pgsql, mbstring, xml, imap, zip, gd, curl, intl, json
+
+      - name: Install composer dependencies
+        run: composer install --ignore-platform-reqs --no-interaction
+
+      - name: Migrate and seed the database
+        run: |
+          php${{ matrix.php }} artisan migrate --force -n --database=testing_pgsql
+          php${{ matrix.php }} artisan db:seed --force -n --database=testing_pgsql
         env:
-          POSTGRES_PASSWORD: flowable
-          POSTGRES_USER: flowable
-        ports:
-          - 5432:5432
-        # needed because the postgres container does not provide a health check
-        options: --health-cmd pg_isready --health-interval 10s --health-timeout 5s --health-retries 5 --tmpfs /var/lib/postgresql/data:rw
-    steps:
-      - uses: actions/checkout@master
-        with:
-          fetch-depth: 10
-      - name: Test
-        # use postgres for the host here because we have specified a container for the job.
-        # If we were running the job on the VM this would be localhost
-        # '>-' is a special YAML syntax and means that new lines would be replaced with spaces
-        # and new lines from the end would be removed
-        run: >-
-          ./mvnw clean install
-          -Dmaven.javadoc.skip=true -B -V
-          -Pcontent,postgresql
-          -Djdbc.url=jdbc:postgresql://postgres:${{ job.services.postgres.ports[5432] }}/flowable
-          -Djdbc.username=flowable
-          -Djdbc.password=flowable
-          -Djdbc.driver=org.postgresql.Driver
-          -pl org.flowable:flowable-content-engine -am
+          DB_PORT: ${{ job.services.postgres.ports[5432] }}
+
+      - name: Run PHP tests
+        run: php${{ matrix.php }} ./vendor/bin/phpunit
+        env:
+          DB_PORT: ${{ job.services.postgres.ports[5432] }}
