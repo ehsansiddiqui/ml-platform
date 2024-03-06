@@ -1,6 +1,7 @@
 # .github/workflows/main.yaml
 name: Main Workflow
 on: [push]
+
 jobs:
   build:
     uses: ehsansiddiqui/ml-platform/.github/workflows/codeql.yml@main
