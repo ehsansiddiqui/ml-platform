@@ -3,4 +3,4 @@ name: Main Workflow
 on: [push]
 jobs:
   build:
-    uses: /.github/workflows/reusable_workflow.codeql.yaml@main
+    uses: ehsansiddiqui/ml-platform/.github/workflows/codeql.yml@main
