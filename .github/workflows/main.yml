@@ -3,6 +3,6 @@ name: Main Workflow
 on: 
  push:
   
-jobs:
-  build:
-    uses: ehsansiddiqui/ml-platform/.github/workflows/test-wf.yml@main
+# jobs:
+#   build:
+#     uses: ehsansiddiqui/ml-platform/.github/workflows/test-wf.yml@main
