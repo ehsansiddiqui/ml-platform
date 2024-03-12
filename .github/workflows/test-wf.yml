@@ -4,10 +4,11 @@ on:
   workflow_call:
     inputs:
       needs_zebra_state:
-        required: true
         type: boolean
         default: false
-
+env:
+  CFLAGS=: -DOPENSSL_TLS_SECURITY_LEVEL=2
+  
 jobs:
   test-without-cached-state:
     runs-on: ubuntu-latest
