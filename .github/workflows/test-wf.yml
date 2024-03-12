@@ -6,8 +6,7 @@ on:
       needs_zebra_state:
         type: boolean
         default: false
-env:
-  CFLAGS=: -DOPENSSL_TLS_SECURITY_LEVEL=2
+env: {}
   
 jobs:
   test-without-cached-state:
