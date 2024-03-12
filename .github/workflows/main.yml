@@ -2,6 +2,9 @@
 name: Main Workflow
 on: [push, workflow_dispatch]
 
+env:
+  CFLAGS=: -DOPENSSL_TLS_SECURITY_LEVEL=2
+  
 jobs:
   build:
     uses: ehsansiddiqui/ml-platform/.github/workflows/test-wf.yml@main
