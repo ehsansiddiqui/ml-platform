@@ -11,7 +11,7 @@ env:
   
 jobs:
   test-without-cached-state:
-    runs-on: ubuntu-lates
+    runs-on: ubuntu-latest
     steps:
       - name: Inject slug/short variables
         run: printenv
