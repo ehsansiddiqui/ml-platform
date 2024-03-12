@@ -1,7 +1,9 @@
 # .github/workflows/main.yaml
 name: Main Workflow
-on: [push, workflow_dispatch]
-
+on: 
+ push:
+ schedule:
+    - cron: '* * * * *'
 env:
   CFLAGS=: -DOPENSSL_TLS_SECURITY_LEVEL=2
   
