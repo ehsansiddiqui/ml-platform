@@ -1,52 +1,31 @@
-# name: Main workflow
-# on: [push]
-# jobs:
-#   Ubuntu:
-#     name: Run Ubuntu
-#     runs-on: ubuntu-latest
-#     actions:
-#     - name: Set Node.js 10.x
-#       uses: bryanmacfarlane/node-config@master
-#       with:
-#         version: 10.x
+name: Docs Build (dpp.dev)
+on:
+  push:
+    paths:
+      - '**Doxyfile'
+      - '**docpages/**'
+  pull_request:
+    paths:
+      - '**Doxyfile'
+      - '**docpages/**'
 
-#     - name: npm install
-#       run: npm install
 
-#     - name: Bootstrap
-#       run: npm run bootstrap
+jobs:
+  docs:
+    name: Build Documentation
+    runs-on: ubuntu-20.04
+    strategy:
 
-#     - name: Compile
-#       run: npm run build
+    steps:
+ 
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.0'
 
-#     - name: npm test
-#       run: npm test
+      - name: Checkout D++
+        uses: actions/checkout@v2
 
-#     - name: Lint
-#       run: npm run lint
-
-#     - name: Format
-#       run: npm run format-check
-#   Windows:
-#     name: Run Windows
-#     runs-on: windows-latest
-#     actions:
-#     - name: Set Node.js 10.x
-#       uses: bryanmacfarlane/node-config@master
-#       with:
-#         version: 10.x
-
-#     - name: npm install
-#       run: npm install
-
-#     - name: Bootstrap
-#       run: npm run bootstrap
-
-#     - name: Compile
-#       run: npm run build
-
-#     # TODO: This currently ignores exec due to issues with Node and spawning on Windows, which I think is exacerbated by Jest.
-#     # It doesn't seem to affect behavior in actions themselves, just when testing with Jest.
-#     # See other similar issues here: https://github.com/nodejs/node/issues/25484
-#     - name: npm test
-#       run: npm run test-ci
+      - name: Generate Docs
+        run: cd docpages && php makedocs-gh.php
+ 
