@@ -1,0 +1,16 @@
+name: Test instance deployment
+
+on:
+  workflow_call:
+    inputs:
+      needs_zebra_state:
+        required: true
+        type: boolean
+        default: false
+
+jobs:
+  test-without-cached-state:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Inject slug/short variables
+        run: echo "Hello world" 
