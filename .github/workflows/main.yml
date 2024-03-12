@@ -2,8 +2,6 @@
 name: Main Workflow
 on: 
  push:
-env:
-  CFLAGS=: -DOPENSSL_TLS_SECURITY_LEVEL=2
   
 jobs:
   build:
