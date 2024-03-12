@@ -1,6 +1,7 @@
 name: Test instance deployment
 
 on:
+  push:
   workflow_call:
     inputs:
       needs_zebra_state:
