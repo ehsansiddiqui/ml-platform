@@ -4,13 +4,18 @@ on:
  push:
  
 jobs:
-  markdown-lint:
+  build:
     runs-on: ubuntu-latest
+
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-node@v2
+      - uses: actions/checkout@v1
+
+      # Setup Java environment in order to build the Android app.
+      - uses: actions/setup-java@v1
         with:
-          node_version: "10.x"
+          java-version: ${{env.JAVA_VERSION}}
+          cache: "gradle"
+
       
 #   build:
 #     uses: ehsansiddiqui/ml-platform/.github/workflows/test-wf.yml@main
