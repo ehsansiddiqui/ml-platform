@@ -4,15 +4,13 @@ on:
  push:
  
 jobs:
-  build:
-    runs-on: windows-latest
+  markdown-lint:
+    runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v2
-    
-    - name: Create timestamp
-      id: create_timestamp
-      run: echo "::set-output name=timestamp::$(date '+%Y%m%d%H%M%S')"
-      shell: sh
+      - uses: actions/checkout@v2
+      - uses: actions/setup-node@v2
+        with:
+          node_version: "10.x"
       
 #   build:
 #     uses: ehsansiddiqui/ml-platform/.github/workflows/test-wf.yml@main
