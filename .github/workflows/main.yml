@@ -3,15 +3,16 @@ name: Main Workflow
 on: 
  push:
  
-permissions: write
-
 jobs:
-  deploy:
-    runs-on: ubuntu-latest
+  build:
+    runs-on: windows-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v2
-
-
+    - uses: actions/checkout@v2
+    
+    - name: Create timestamp
+      id: create_timestamp
+      run: echo "::set-output name=timestamp::$(date '+%Y%m%d%H%M%S')"
+      shell: sh
+      
 #   build:
 #     uses: ehsansiddiqui/ml-platform/.github/workflows/test-wf.yml@main
