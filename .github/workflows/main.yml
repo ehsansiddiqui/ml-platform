@@ -3,6 +3,16 @@ name: Main Workflow
 on: 
  push:
   
-# jobs:
+jobs:
+  release-pull-request-automation:
+    if: ${{ github.event.ref_type == 'branch' && contains( github.ref, 'release/' ) }}
+    env:
+      SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: act10ns/slack@v1
+        with:
+          status: starting
+          if: ${{ always() }}
 #   build:
 #     uses: ehsansiddiqui/ml-platform/.github/workflows/test-wf.yml@main
