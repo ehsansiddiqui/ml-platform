@@ -1,13 +1,11 @@
 # .github/workflows/main.yaml
 name: Main Workflow
 on: 
+ workflow_dispatch:
  push:
   branches:
-      - main
-      - '+([0-9])?(.{+([0-9]),x}).x'
-  tags:
-      - +.+.+.+.+
- 
+      - '**:**'
+
 jobs:
   build-linux:
     runs-on: ubuntu-latest
