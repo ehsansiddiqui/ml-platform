@@ -1,6 +1,7 @@
 # .github/workflows/main.yaml
 name: Main Workflow
 on: 
+ workflow_dispatch:
  watch:
     types: [started]
     
