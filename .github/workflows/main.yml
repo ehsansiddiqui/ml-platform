@@ -1,9 +1,18 @@
 # .github/workflows/main.yaml
 name: Main Workflow
 on: 
- workflow_dispatch:
- watch:
-    types: [started]
+  workflow_dispatch:
+    inputs:
+      source_branch:
+        required: true
+        default: 'Lede'
+        type: choice
+        options:
+          - 'Lede'
+          - 'Immortalwrt'
+          - 'Official'
+          - 'Xwrt'
+          - 'Lede'
     
 jobs:
   build:
