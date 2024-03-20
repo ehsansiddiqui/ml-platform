@@ -1,19 +1,33 @@
 # .github/workflows/main.yaml
 name: Main Workflow
 on: 
- workflow_dispatch:
  push:
-  branches:
-      - '**:**'
-
+ 
 jobs:
-  build-linux:
+  bump-manifest-version:
+    name: 'Bump fxmanifest version'
+    needs: create-tagged-release
     runs-on: ubuntu-latest
+    steps:
+      - name: Get tag
+        run: echo "RELEASE_VERSION=${GITHUB_REF#refs/*/}" >> $GITHUB_ENV
+      - name: Checkout
+        uses: actions/checkout@v2
+        
+  create-tagged-release:
+    name: Build and Create Tagged Release
+    runs-on: ubuntu-latest
+    needs: [bump-manifest-version]
 
     steps:
-    - uses: actions/checkout@master
-    - name: Use Node.js ${{ matrix.node-version }}
-      uses: actions/setup-node@v2
+      - name: Get tag
+        run: echo ::set-output name=VERSION_TAG::${GITHUB_REF/refs\/tags\//}
+        id: get_tag
+      - name: Checkout source code
+        uses: actions/checkout@v2
+        
+
+
     
       
 #   build:
