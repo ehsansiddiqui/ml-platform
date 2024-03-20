@@ -1,18 +1,19 @@
 # .github/workflows/main.yaml
 name: Main Workflow
 on: 
-  workflow_dispatch:
+   workflow_dispatch:
     inputs:
-      source_branch:
+      branch:
+        description: 'Branch to build from (make sure to use workflow from the same branch).'
         required: true
-        default: 'Lede'
         type: choice
         options:
-          - 'Lede'
-          - 'Immortalwrt'
-          - 'Official'
-          - 'Xwrt'
-          - 'Lede'
+        - redhat-3.9
+        - redhat-3.7
+        - redhat-3.8
+        - redhat-3.9
+        - redhat-3.10
+   push:
     
 jobs:
   build:
