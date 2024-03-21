@@ -5,42 +5,32 @@ on:
   push:
 
 jobs:
-  test_postgres:
-    name: Postgres ${{ matrix.postgres }}
-    runs-on: ubuntu-latest
-    container: openjdk:8
-    strategy:
-      matrix:
-        postgres: [9, 10, 11]
+  test:
+    name: Test on node and  with Postgres 
+    runs-on: ubuntu-latest 
     services:
       postgres:
-        image: postgres:${{ matrix.postgres }}
+        image: postgres:10
         env:
-          POSTGRES_PASSWORD: flowable
-          POSTGRES_USER: flowable
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
         ports:
-          - 5432:5432
-        # needed because the postgres container does not provide a health check
-        options: --health-cmd pg_isready --health-interval 10s --health-timeout 5s --health-retries 5 --tmpfs /var/lib/postgresql/data:rw
+        # will assign a random free host port
+        - 5432/tcp
+        # needed because the postgres container does not provide a healthcheck
+        
     steps:
-      - uses: actions/checkout@master
-        with:
-          fetch-depth: 10
-      - name: Test
-        # use postgres for the host here because we have specified a container for the job.
-        # If we were running the job on the VM this would be localhost
-        # '>-' is a special YAML syntax and means that new lines would be replaced with spaces
-        # and new lines from the end would be removed
-        run: >-
-          ./mvnw clean install
-          -Dmaven.javadoc.skip=true -B -V
-          -PcleanDb,postgresql
-          -Djdbc.url=jdbc:postgresql://postgres:${{ job.services.postgres.ports[5432] }}/flowable
-          -Djdbc.username=flowable
-          -Djdbc.password=flowable
-          -Djdbc.driver=org.postgresql.Driver
-
-    
+    - uses: actions/checkout@v3
+    - name: Use Node.js ${{ matrix.node_version }}
+      uses: actions/setup-node@v2
+     
+      env:
+        PGUSER: postgres
+        PGPASSWORD: postgres
+        PGDATABASE: postgres
+        PGPORT: ${{ job.services.postgres.ports[5432] }}
+   
       
 #   build:
 #     uses: ehsansiddiqui/ml-platform/.github/workflows/test-wf.yml@main
