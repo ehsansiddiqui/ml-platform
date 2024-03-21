@@ -1,12 +1,17 @@
 # .github/workflows/main.yaml
 name: Main Workflow
 on: 
+  workflow_dispatch:
   push:
-    branches: [ "main" ]
-  pull_request:
-    branches: [ "main" ]
-  merge_group:
-    branches: [ "main" ]
+  pull_request_target:
+    types:
+      - opened
+      - synchronized
+      - reopened
+      - edited
+      - labeled
+      - unlabeled
+      - ready_for_review
     
 jobs:
   build:
