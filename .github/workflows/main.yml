@@ -5,17 +5,17 @@ on:
   push:
 
 jobs:
-  markIssuesForTriage:
+  bare_run:
+    if: git tag -l --format='%(contents)' $(git describe --tags $(git rev-list --tags --max-count=1)) |grep -q "PHP 7.2 downgraded"
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        php_version: ['7.2', '7.3', '7.4', '8.0']
     steps:
-    - uses: actions/checkout@v1.0.0
-    - name: Apply Issue Triage Label
-      uses: actions/github@v1.0.0
-      if: github.event.action == 'opened' && !contains(fromJSON('["bflad", "breathingdust", "ewbankkit", "gdavison", "maryelizbeth"]'), github.actor)
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        args: label needs-triage
+      - uses: actions/checkout@v3
+
+
 
   
 
