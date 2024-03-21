@@ -9,9 +9,12 @@ on:
     branches: [ "main" ]
     
 jobs:
-  check_run:
-    name: Start
-    uses: "./.github/workflows/rel-lnx.yml"
+  build:
+    name: Build
+    runs-on: windows-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
 
 
     
