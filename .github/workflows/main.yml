@@ -5,32 +5,30 @@ on:
   push:
 
 jobs:
-  test:
-    name: Test on node and  with Postgres 
-    runs-on: ubuntu-latest 
-    services:
-      postgres:
-        image: postgres:10
-        env:
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: postgres
-        ports:
-        # will assign a random free host port
-        - 5432/tcp
-        # needed because the postgres container does not provide a healthcheck
-        
+  build:
+    strategy:
+      matrix:
+        os: [ ubuntu-latest, windows-latest ]
+        java: [8, 11, 17, 20]
+        exclude:
+          - os: windows-latest
+            java: 8
+          - os: windows-latest
+            java: 11
+          - os: windows-latest
+            java: 19
+
+    name: Build on Java 
+    runs-on: ${{ matrix.os }}
     steps:
-    - uses: actions/checkout@v3
-    - name: Use Node.js ${{ matrix.node_version }}
-      uses: actions/setup-node@v2
-     
-      env:
-        PGUSER: postgres
-        PGPASSWORD: postgres
-        PGDATABASE: postgres
-        PGPORT: ${{ job.services.postgres.ports[5432] }}
-   
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Validate Gradle wrapper
+        uses: gradle/wrapper-validation-action@v1
+      - name: Set up Java
+        uses: actions/setup-java@v3
+       
+
       
 #   build:
 #     uses: ehsansiddiqui/ml-platform/.github/workflows/test-wf.yml@main
