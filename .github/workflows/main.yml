@@ -1,8 +1,12 @@
 # .github/workflows/main.yaml
 name: Main Workflow
 on: 
-   workflow_dispatch:
-   push:
+  push:
+    branches: [ "master" ]
+  pull_request:
+    branches: [ "master" ]
+  merge_group:
+    branches: [ "master" ]
     
 jobs:
   check_run:
