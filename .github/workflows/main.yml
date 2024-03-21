@@ -6,20 +6,8 @@ on:
     
 jobs:
   check_run:
-    if: github.repository == 'open-watcom/open-watcom-v2'
     name: Start
-    runs-on: ubuntu-latest
-    outputs:
-      runit: ${{ steps.check_tag.outputs.old }}
-    steps:
-    - name: checkout
-      uses: actions/checkout@v3.5.0
-    - name: Check tag reference
-      id: check_tag
-      uses: "./.github/workflows/rel-lnx.yml"
-      with:
-        tag:     'Current-build'
-        owdebug: ${{ vars.OWDEBUG }}
+    uses: "./.github/workflows/rel-lnx.yml"
 
 
     
