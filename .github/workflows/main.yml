@@ -18,7 +18,7 @@ jobs:
           - os: windows-latest
             java: 19
 
-    name: Build on Java 
+    name: Build on Java ${{ matrix.java }} - ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout
@@ -27,6 +27,13 @@ jobs:
         uses: gradle/wrapper-validation-action@v1
       - name: Set up Java
         uses: actions/setup-java@v3
+        with:
+          distribution: zulu
+          java-version: ${{ matrix.java }}
+      - name: Setup Gradle
+        uses: gradle/gradle-build-action@v2
+      - name: Build with Gradle
+        run: ./gradlew build
        
 
       
