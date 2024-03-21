@@ -2,11 +2,11 @@
 name: Main Workflow
 on: 
   push:
-    branches: [ "master" ]
+    branches: [ "main" ]
   pull_request:
-    branches: [ "master" ]
+    branches: [ "main" ]
   merge_group:
-    branches: [ "master" ]
+    branches: [ "main" ]
     
 jobs:
   check_run:
