@@ -5,25 +5,19 @@ on:
    push:
     
 jobs:
-  zip:
+  coverity:
     runs-on: ubuntu-latest
     steps:
-      - name: If a pull_request, set final to 0
-        if: github.event_name == 'pull_request'
-        run: |
-          echo "JOB_FINAL=0" >> $GITHUB_ENV
-          echo "JOB_BRANCH=${{ github.event.pull_request.head.ref }}" >> $GITHUB_ENV
-      - name: If a workflow_dispatch, set final based on input
-        if: github.event_name == 'workflow_dispatch'
-        run: |
-          echo "JOB_FINAL=${{ github.event.inputs.final }}" >> $GITHUB_ENV
-          branch=$(echo "${{ github.ref }}" | sed -r "s|refs/heads/||" | sed -r "s|refs/tags/||")
-          echo "JOB_BRANCH=${branch}" >> $GITHUB_ENV
-      - name: Setup branch for consumption in subsequent steps
-        id: settings
-        run: |
-          echo "branch=${JOB_BRANCH}" >> $GITHUB_OUTPUT
-        
+    - uses: actions/checkout@v2
+    - name: prebuilt step
+    - run: sudo apt update
+    - run: sudo apt install -y libgraphicsmagick1-dev libpng-dev libexiv2-dev libtiff-dev libjpeg-dev libxml2-dev libbz2-dev libfreetype6-dev libpstoedit-dev autoconf automake libtool intltool autopoint
+   
+    - uses: vapier/coverity-scan-action@v1
+    - name: actual check
+      with:
+        email: ${{ secrets.COVERITY_SCAN_EMAIL }}
+        token: ${{ secrets.COVERITY_SCAN_TOKEN }}
 
 
     
