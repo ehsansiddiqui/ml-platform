@@ -2,20 +2,20 @@
 name: Main Workflow
 on: 
   workflow_dispatch:
-  create:  # is used for publishing to PyPI and TestPyPI
-    tags:  # any tag regardless of its name, no branches
   push:
-jobs:
-  bare_run:
-    if: git tag -l --format='%(contents)' $(git describe --tags $(git rev-list --tags --max-count=1)) |grep -q "PHP 7.2 downgraded"
-    runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        php_version: ['7.2', '7.3', '7.4', '8.0']
-    steps:
-      - uses: actions/checkout@v3
 
+jobs:
+  notify_if_not_dependabot:
+    if:  ${{ github.actor }} != 'dependabot'
+    runs-on: ubuntu-latest
+    steps:
+    - name: Save GitHub Event to File
+      run: echo ${{ github.event }} > event.json
+    - name: Discord Webhook Action
+      uses: tsickert/discord-webhook@v5.0.0
+      with:
+        webhook-url: ${{ secrets.DISCORD_WEBHOOK_URL }}
+        raw-data: event.json
 
 
   
