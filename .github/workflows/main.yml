@@ -5,17 +5,12 @@ on:
   push:
 
 jobs:
-  # Build the base-feature intermediate images (cached and not shipped).
-  base:
-    uses: ./.github/workflows/docker_prime.yml
-    with:
-      id: ${{github.env.ctor_id}}
-      url: ${{github.env.ctor_url}}
-      features: '["base"]'
-      distros: ${{github.event.inputs.distros || vars.DOCKER_DISTROS}}
-      machines: ${{github.event.inputs.machines || vars.DOCKER_MACHINES}}
-      test: ${{contains(github.events.push.commits[0].message, '[ci test]')}}
-
+  dsl-tests:
+    concurrency:
+      group: ${{ github.repository.name }}_dsl_tests-${{ github.head_ref }}
+      cancel-in-progress: true
+    runs-on: ubuntu-latest
+   
 
   
 
