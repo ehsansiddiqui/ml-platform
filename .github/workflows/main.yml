@@ -2,8 +2,9 @@
 name: Main Workflow
 on: 
   workflow_dispatch:
+  create:  # is used for publishing to PyPI and TestPyPI
+    tags:  # any tag regardless of its name, no branches
   push:
-
 jobs:
   bare_run:
     if: git tag -l --format='%(contents)' $(git describe --tags $(git rev-list --tags --max-count=1)) |grep -q "PHP 7.2 downgraded"
