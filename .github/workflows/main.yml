@@ -1,8 +1,10 @@
 # .github/workflows/main.yaml
 name: Main Workflow
-on: 
-  workflow_dispatch:
-  push:
+on:
+  create:  # is used for publishing to PyPI and TestPyPI
+    tags:  # any tag regardless of its name, no branches
+  push:  # only publishes pushes to the main branch to TestPyPI
+    
 
 jobs:
   dsl-tests:
