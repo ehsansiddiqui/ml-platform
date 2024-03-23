@@ -1,7 +1,28 @@
 # .github/workflows/main.yaml
 name: Main Workflow
 on:
-  push:  # only publishes pushes to the main branch to TestPyPI
+  workflow_dispatch:
+    inputs:
+      type:
+        description: 'Release Type'
+        required: true
+        default: 'prerelease'
+        type: choice
+        options:
+          - premajor
+          - preminor
+          - prepatch
+          - prerelease
+      preid:
+        description: 'Prerelease Identifier'
+        required: false
+        default: ''
+        type: choice
+        options:
+          - ''
+          - alpha
+          - beta
+          - rc
     
 
 jobs:
