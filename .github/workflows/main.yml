@@ -1,22 +1,20 @@
 # .github/workflows/main.yaml
 name: Main Workflow
-on: push
+on:
+  workflow_run:
+    types:
+      - completed
 
 jobs:
-  build:
-    runs-on: ${{ matrix }}
-    strategy:
-      matrix:
-        os: [ubuntu-16.04, ubuntu-18.04, ubuntu-20.04, macos-10.15, windows-2019]
-        include:
-          - os: windows-2019
-          - 32_bit: true
+  merge:
+    name: Merge
+    runs-on: ubuntu-latest
     steps:
-      - name: Show env
-        run: |
-             set
-             ls
-             uname -a
+      - name: Auto merge
+        uses: ridedott/merge-me-action@v2
+        with:
+          GITHUB_LOGIN: 'dependabot*'
+          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
        
       
 #   build:
