@@ -1,29 +1,20 @@
 # .github/workflows/main.yaml
 name: Main Workflow
-on: [push, repository_dispatch]
+on: push
     
 
 jobs:
   build:
 
     runs-on: ubuntu-latest
-
+    
+    container:
+      image:  google/dart:latest
+    
     steps:
     - uses: actions/checkout@v1
-    - name: Build Docs
-      run: cargo +nightly doc --no-deps
-    - name: Copy docs
-      run: cp -r target/doc docs/head
-    - name: Commit files
-      run: |
-        git config --local user.email "action@github.com"
-        git config --local user.name "GitHub Action"
-        git commit -m "Update docs" -a docs
-    - name: Push changes
-      uses: ad-m/github-push-action@master
-      with:
-        github_token: ${{ secrets.GITHUB_TOKEN }}
-
+    - name: Chopper
+     
       
 #   build:
 #     uses: ehsansiddiqui/ml-platform/.github/workflows/test-wf.yml@main
