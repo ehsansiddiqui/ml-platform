@@ -7,7 +7,7 @@ jobs:
   stub:
     name: Empty job to prevent workflow fail
     runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request' && github.event.label.id != 2648778919
+    if: github.event_name == 'push' && github.event.label.id != 2648778919
     steps:
       - name: stub action
         run: ": This job is used to prevent the workflow to fail when all other jobs are skipped."
