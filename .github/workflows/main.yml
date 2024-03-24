@@ -1,21 +1,42 @@
 # .github/workflows/main.yaml
 name: Main Workflow
 on:
-  workflow_run:
-    types:
-      - completed
+  push:
 
 jobs:
-  merge:
-    name: Merge
-    runs-on: ubuntu-latest
-    steps:
-      - name: Auto merge
-        uses: ridedott/merge-me-action@v2
-        with:
-          GITHUB_LOGIN: 'dependabot*'
-          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
-       
+    php-tests:
+        runs-on: ${{ matrix.os }}
+
+        strategy:
+            matrix:
+                os: [ubuntu-latest, windows-latest]
+                php: [7.4, 7.3, 7.2]
+                laravel: [6.*, 5.8.*, 5.7.*, 5.6.*, 5.5.*]
+                dependency-version: [prefer-lowest, prefer-stable]
+                include:
+                    - laravel: 6.*
+                      testbench: 4.*
+                    - laravel: 5.8.*
+                      testbench: 3.8.*
+                    - laravel: 5.7.*
+                      testbench: 3.7.*
+                    - laravel: 5.6.*
+                      testbench: 3.6.*
+                    - laravel: 5.5.*
+                      testbench: 3.5.*
+                exclude:
+                    - laravel: 5.7.*
+                      php: 7.4
+                    - laravel: 5.6.*
+                      php: 7.4
+                    - laravel: 5.5.*
+                      php: 7.4
+
+        name: ${{ matrix.os[0] }} - P${{ matrix.php }} - L${{ matrix.laravel }} - ${{ matrix.dependency-version }}
+
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v1
       
 #   build:
 #     uses: ehsansiddiqui/ml-platform/.github/workflows/test-wf.yml@main
