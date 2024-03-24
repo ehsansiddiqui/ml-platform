@@ -1,24 +1,27 @@
 # .github/workflows/main.yaml
 name: Main Workflow
-on: push
+on: [push, repository_dispatch]
 
-defaults:
-  run:
-    working-directory: nym-connect/desktop
-    
 jobs:
-  markIssuesForTriage:
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v1.0.0
-    - name: Apply Issue Triage Label
-      uses: actions/github@v1.0.0
-      if: github.event.action == 'opened' && !contains(fromJSON('["bflad", "breathingdust", "ewbankkit", "gdavison", "maryelizbeth"]'), github.actor)
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        args: label needs-triage
+  build:
 
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v1
+    - name: Build Docs
+      run: cargo +nightly doc --no-deps
+    - name: Copy docs
+      run: cp -r target/doc docs/head
+    - name: Commit files
+      run: |
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        git commit -m "Update docs" -a docs
+    - name: Push changes
+      uses: ad-m/github-push-action@master
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
 
      
       
