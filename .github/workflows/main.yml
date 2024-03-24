@@ -3,14 +3,20 @@ name: Main Workflow
 on: push
 
 jobs:
-  push:
-    name: Actions
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v1
+  publish-tauri:
+    if: ${{ (startsWith(github.ref, 'refs/tags/nym-connect-') && github.event_name == 'release') || github.event_name == 'workflow_dispatch' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        platform: [macos-latest]
+    runs-on: ${{ matrix.platform }}
 
-      - name: Validate changed file
-        run: jq --raw-output "." "${{ steps.files.outputs.files_updated[0].file }}"
+    outputs:
+      release_id: ${{ steps.create-release.outputs.id }}
+      release_date: ${{ fromJSON(steps.create-release.outputs.assets[0].published_at) }}
+      version: ${{ steps.release-info.outputs.version }}
+      filename: ${{ steps.release-info.outputs.filename }}
+      file_hash: ${{ steps.release-info.outputs.file_hash }}
        
       
 #   build:
