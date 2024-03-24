@@ -10,9 +10,9 @@ jobs:
     steps:
     - uses: actions/checkout@v1
     - name: Build Docs
-      run: cargo +nightly doc --no-deps
+      run: echo "test build docs"
     - name: Copy docs
-      run: cp -r target/doc docs/head
+      run: echo "copy docs" 
     - name: Commit files
       run: |
         git config --local user.email "action@github.com"
