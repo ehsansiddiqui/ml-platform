@@ -15,10 +15,7 @@ jobs:
       run: echo "copy docs" 
     - name: Commit files
       run: echo "commit files"
-    - name: Push changes
-      uses: ad-m/github-push-action@master
-      with:
-        github_token: ${{ secrets.GITHUB_TOKEN }}
+  
 
      
       
