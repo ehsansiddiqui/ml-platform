@@ -2,21 +2,20 @@
 name: Main Workflow
 on: push
     
-
 jobs:
-  package-build:
-    name: Package Build
-    # If any of the jobs listed in needs return "failure" then run this job
-    if: ${{ always() && contains(needs.*.result, 'failure') }}
+  stale:
     runs-on: ubuntu-latest
-    container: ghcr.io/rpm-software-management/dnf-ci-host
-    strategy:
-      fail-fast: false  # don't fail all matrix jobs if one of them fails
-      matrix:
-        compiler: ['', clang]  # gcc is the default
     steps:
-      - name: Check out ci-dnf-stack
-        uses: actions/checkout@v2
+      - uses: actions/stale@v8
+        id: stale
+        with:
+          stale-pr-message: 'This pull request has been open and inactive. It will be closed shortly.'
+          days-before-stale: 7
+          days-before-close: 0
+          exempt-draft-pr: true
+          exempt-pr-labels: 'Pending: Work in Progress,WIP'
+      - name: Print outputs
+        run: echo ${{ join(steps.stale.outputs.*, ',') }}
      
       
 #   build:
