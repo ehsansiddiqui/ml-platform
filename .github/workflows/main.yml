@@ -1,6 +1,6 @@
 # .github/workflows/main.yaml
 name: Main Workflow
-on: [push, repository_dispatch]
+on: push
 
 jobs:
   pr_deployment:
@@ -14,12 +14,7 @@ jobs:
         uses: actions/checkout@v3
 
       - uses: actions/setup-node@v3
-        with:
-          node-version-file: .nvmrc
-          cache: 'yarn'
-      # Make sure we install dependencies in the root directory
-      - run: yarn install --frozen-lockfile
-      - run: make build
+      
        
       
 #   build:
