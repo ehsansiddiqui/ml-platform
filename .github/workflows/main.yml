@@ -9,12 +9,6 @@ jobs:
     steps:
       - uses: actions/checkout@v1
 
-      - name: Changed Files Exporter
-        id: files
-        uses: futuratrepadeira/changed-files@v3.0.0
-        with:
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
-
       - name: Validate changed file
         run: jq --raw-output "." "${{ steps.files.outputs.files_updated[0].file }}"
        
