@@ -3,17 +3,14 @@ name: Main Workflow
 on: push
 
 jobs:
-  test-job:
-    # We only want to run the app if the PR Deployment label has been added
-    if: ${{ github.event.label.id == 2500798832 }}
-
-    name: test-job
+  # Empty job if PR labeled with another label.
+  stub:
+    name: Empty job to prevent workflow fail
     runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request' && github.event.label.id != 2648778919
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-
-      - uses: actions/setup-node@v3
+      - name: stub action
+        run: ": This job is used to prevent the workflow to fail when all other jobs are skipped."
       
        
       
