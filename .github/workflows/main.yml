@@ -3,21 +3,24 @@ name: Main Workflow
 on: [push, repository_dispatch]
 
 jobs:
-  build:
+  pr_deployment:
+    # We only want to run the app if the PR Deployment label has been added
+    if: ${{ github.event.label.id == 2500798832 }}
 
+    name: Start server
     runs-on: ubuntu-latest
-
     steps:
-    - uses: actions/checkout@v1
-    - name: Build Docs
-      run: echo "test build docs"
-    - name: Copy docs
-      run: echo "copy docs" 
-    - name: Commit files
-      run: echo "commit files"
-  
+      - name: Checkout code
+        uses: actions/checkout@v3
 
-     
+      - uses: actions/setup-node@v3
+        with:
+          node-version-file: .nvmrc
+          cache: 'yarn'
+      # Make sure we install dependencies in the root directory
+      - run: yarn install --frozen-lockfile
+      - run: make build
+       
       
 #   build:
 #     uses: ehsansiddiqui/ml-platform/.github/workflows/test-wf.yml@main
