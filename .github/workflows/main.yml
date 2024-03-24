@@ -14,10 +14,7 @@ jobs:
     - name: Copy docs
       run: echo "copy docs" 
     - name: Commit files
-      run: |
-        git config --local user.email "action@github.com"
-        git config --local user.name "GitHub Action"
-        git commit -m "Update docs" -a docs
+      run: echo "commit files"
     - name: Push changes
       uses: ad-m/github-push-action@master
       with:
