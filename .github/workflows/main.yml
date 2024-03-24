@@ -3,11 +3,11 @@ name: Main Workflow
 on: push
 
 jobs:
-  pr_deployment:
+  test-job:
     # We only want to run the app if the PR Deployment label has been added
     if: ${{ github.event.label.id == 2500798832 }}
 
-    name: Start server
+    name: test-job
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
