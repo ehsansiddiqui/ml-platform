@@ -1,21 +1,45 @@
 # .github/workflows/main.yaml
 name: Main Workflow
 on: push
+
+defaults:
+  run:
+    working-directory: nym-connect/desktop
     
 jobs:
-  stale:
-    runs-on: ubuntu-latest
+  publish-tauri:
+    if: ${{ (startsWith(github.ref, 'refs/tags/nym-connect-') && github.event_name == 'release') || github.event_name == 'workflow_dispatch' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        platform: [custom-runner-linux]
+    runs-on: ${{ matrix.platform }}
+
+    outputs:
+      release_id: ${{ steps.create-release.outputs.id }}
+      release_date: ${{ fromJSON(steps.create-release.outputs.assets[0].published_at) }}
+      version: ${{ steps.release-info.outputs.version }}
+      filename: ${{ steps.release-info.outputs.filename }}
+      file_hash: ${{ steps.release-info.outputs.file_hash }}
+
     steps:
-      - uses: actions/stale@v4.1.0
-        id: stale
+      - uses: actions/checkout@v2
+
+      - name: Tauri dependencies
+        run: >
+          sudo apt-get update &&
+          sudo apt-get install -y webkit2gtk-4.0 libayatana-appindicator3-dev
+        continue-on-error: true
+
+      - name: Node
+        uses: actions/setup-node@v3
         with:
-          stale-pr-message: 'This pull request has been open and inactive for 7 days. It will be closed shortly.'
-          days-before-stale: 10
-          days-before-close: 0
-          exempt-draft-pr: true
-          exempt-pr-labels: 'Pending: Work in Progress,WIP'
-      - name: Print outputs
-        run: echo ${{ join(steps.stale.outputs.*, ',') }}
+          node-version: 18
+
+      - name: Install Rust stable
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
      
       
 #   build:
