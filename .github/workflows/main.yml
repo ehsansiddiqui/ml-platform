@@ -2,21 +2,11 @@
 name: Main Workflow
 on:
   workflow_dispatch:
-  repository_dispatch:
-    types:
-    - script
   push:
     paths: &1
     - contrib/ruby_event_store-profiler/**
-    - ".github/workflows/ruby_event_store-profiler_mutate.yml"
-    - support/**
     - "!support/bundler/**"
     - "!support/ci/**"
-  pull_request:
-    types:
-    - opened
-    - reopened
-    paths: *1
 
 jobs:
     php-tests:
