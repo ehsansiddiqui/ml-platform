@@ -2,24 +2,32 @@
 name: Main Workflow
 on:
   push:
-    types:
-      - tags
   workflow_dispatch:
 
+
 jobs:
-  job:
-    name: release
-    runs-on: ${{ matrix.os }}
+  build:
+
+    runs-on: [ubuntu-latest,windows-latest, macOS-latest]
+
     strategy:
-      fail-fast: false
       matrix:
-        os: [ubuntu-latest]
-        include:
-          - os: ubuntu-latest
-            triplet: x64-linux
-           
+        node-version: [8.x, 10.x, 12.x]
+
     steps:
-      - uses: actions/checkout@v1
+    - uses: actions/checkout@v1
+    - name: Use Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v1
+      with:
+        node-version: ${{ matrix.node-version }}
+    - name: npm install, build, and test
+      run: |
+        npm install
+        npm run build --if-present
+        npm test
+      env:
+        CI: true
+
       
 #   build:
 #     uses: ehsansiddiqui/ml-platform/.github/workflows/test-wf.yml@main
