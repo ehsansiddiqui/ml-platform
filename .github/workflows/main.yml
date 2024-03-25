@@ -4,28 +4,31 @@ on:
   workflow_dispatch:
   push:
   
+
 jobs:
-  stale:
-
+  # This job is used to determine what files have changed and is used by later jobs to determine if they should run.
+  setup:
+    name: Setup
     runs-on: ubuntu-latest
-
+    timeout-minutes: 1
+    outputs:
+      frontend: ${{ steps.check-frontend.outputs.any_changed }}
+      markdown: ${{ steps.check-markdown.outputs.any_changed }}
+      json: ${{ steps.check-json.outputs.any_changed }}
+      python: ${{ steps.check-python.outputs.any_changed }}
+      workflows: ${{ steps.check-workflows.outputs.any_changed }}
     steps:
-    - uses: actions/stale@v1
-      with:
-        repo-token: ${{ secrets.GITHUB_TOKEN }}
-        days-before-stale: 30
-        days-before-close: 15
-        operations-per-run: 10
-        stale-issue-message: >
-          Marking this issue stale since there has been no activity for 30 days.
-          It will be closed if there is no activity for another 15 days.
-        stale-pr-message: >
-          Marking this pull-request stale since there has been no activity for 30 days.
-          It will be closed if there is no activity for another 15 days.
-        stale-issue-label: &stale-label 'stale'
-        stale-pr-label: *stale-label
-        exempt-issue-label: &backlog-label 'backlog'
-        exempt-pr-label: *backlog-label
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 2
+    
+    
+  # Repository wide checks
+
+  codeql:
+    name: CodeQL
+    uses: ./.github/workflows/codeql.yml
 
       
 
