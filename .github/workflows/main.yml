@@ -1,8 +1,8 @@
 # .github/workflows/main.yaml
 name: Main Workflow
 on:
-  workflow_dispatch:
-  push:
+  schedule:
+    - '0 0 * * *'
   
 
 jobs:
@@ -10,15 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
-    - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v2
-      with:
-        python-version: ${{ matri
-    - run: ${{ github.event.inputs.command }}
-    env:
-      GIT_COMMITTER_NAME: GitHub Actions
-      GIT_AUTHOR_NAME: GitHub Actions
-      EMAIL: github-actions[bot]@users.noreply.github.com
+   
 
 
 
