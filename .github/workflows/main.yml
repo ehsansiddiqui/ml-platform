@@ -16,6 +16,13 @@ jobs:
     - name: Checkout Repository
       uses: actions/checkout@v3
 
+    - name: Delete Artifacts
+      run: |
+        python .github/workflows/delete_artifacts.py \
+          -t ${{ secrets.GITHUB_TOKEN }} \
+          -a "transient_.*" \
+          -r ${{ github.event.workflow_run.id }}
+
       env:
         GITHUB_REPOSITORY: ${{ vars.GITHUB_REPOSITORY }}
 
