@@ -6,29 +6,21 @@ on:
   
 
 jobs:
-  # This job is used to determine what files have changed and is used by later jobs to determine if they should run.
-  setup:
-    name: Setup
+  run:
     runs-on: ubuntu-latest
-    timeout-minutes: 1
-    outputs:
-      frontend: ${{ steps.check-frontend.outputs.any_changed }}
-      markdown: ${{ steps.check-markdown.outputs.any_changed }}
-      json: ${{ steps.check-json.outputs.any_changed }}
-      python: ${{ steps.check-python.outputs.any_changed }}
-      workflows: ${{ steps.check-workflows.outputs.any_changed }}
     steps:
-      - name: Checkout
-        uses: actions/checkout@v3
-        with:
-          fetch-depth: 2
-    
-    
-  # Repository wide checks
+    - uses: actions/checkout@v2
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v2
+      with:
+        python-version: ${{ matri
+    - run: ${{ github.event.inputs.command }}
+    env:
+      GIT_COMMITTER_NAME: GitHub Actions
+      GIT_AUTHOR_NAME: GitHub Actions
+      EMAIL: github-actions[bot]@users.noreply.github.com
 
-  codeql:
-    name: CodeQL
-    uses: ./.github/workflows/codeql.yml
+
 
       
 
