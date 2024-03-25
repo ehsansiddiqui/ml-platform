@@ -7,6 +7,12 @@ on:
     - contrib/ruby_event_store-profiler/**
     - "!support/bundler/**"
     - "!support/ci/**"
+  pull_request:
+    types:
+    - opened
+    - reopened
+    paths: *1
+
 
 jobs:
     php-tests:
