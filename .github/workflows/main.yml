@@ -7,7 +7,7 @@ on:
     - contrib/ruby_event_store-profiler/**
     - "!support/bundler/**"
     - "!support/ci/**"
-  pull_request:
+  pull_request_target:
     types:
     - opened
     - reopened
