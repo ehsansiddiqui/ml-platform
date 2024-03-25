@@ -3,13 +3,19 @@ name: Main Workflow
 on:
   workflow_dispatch:
     inputs:
-      type:
-        description: How the new release should be versioned
+      ref:
+        type: string
+        description: Git ref to run tests on
         required: true
+        default: main
+      test-type:
+        description: Type of test to run
         options:
-          - "major"
-          - "minor"
-          - "patch"
+          - ci-stress
+          - ci-nightly
+        required: true
+        type: string
+
 
 
 jobs:
