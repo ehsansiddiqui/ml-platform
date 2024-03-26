@@ -2,31 +2,35 @@
 name: Main Workflow
 on:
   push:
-  workflow_call:
-    # Map the workflow outputs to job outputs
-    outputs:
-      project-id:
-        description: "description"
-      environment:
-        description: "enviro,ment"
-        required: true
-      cluster-name:
-        description: "cluster name"
-        required: true
-      region:
-        description: "region"
-        required: true
-
+  
 jobs:
-  test:
+  release_packages:
+    name: Release Packages
     runs-on: ubuntu-latest
     steps:
-      - run: |
-          echo "${{ inputs.project-id }}"
-          echo "${{ inputs.environment }}"
-          echo "${{ inputs.cluster-name }}"
-          echo "${{ inputs.region }}"
-       
+      - name: Checkout Repo
+        uses: actions/checkout@master
+        with:
+          # This makes Actions fetch all Git history so that Changesets can generate changelogs with the correct commits
+          fetch-depth: 0
+
+      - name: Install Dependencies
+        run: npm ci
+      
+      - name: Possibly deploy WordPress plugin
+        # Checks the changesets publishedPackages output
+        # If there is a published package named "@faustwp/wordpress-plugin"
+        # Then deploy the WordPress plugin
+        # https://github.com/changesets/action#outputs
+        if: contains(steps.changesets.outputs.publishedPackages.*.name, '@faustwp/wordpress-plugin')
+        # Use a variant of 10up/action-wordpress-plugin-deploy that allows us to specify a PLUGIN_DIR
+        # to support our monorepo structure.
+        uses: ./.github/actions/release-plugin
+        env:
+          SVN_PASSWORD: ${{ secrets.SVN_PASSWORD }}
+          SVN_USERNAME: ${{ secrets.SVN_USERNAME }}
+          PLUGIN_DIR: plugins/faustwp
+          SLUG: faustwp
     
 
       
