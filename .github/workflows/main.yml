@@ -2,24 +2,31 @@
 name: Main Workflow
 on:
   push:
-  
+  workflow_call:
+    # Map the workflow outputs to job outputs
+    outputs:
+      project-id:
+        description: "description"
+        required: true
+      environment:
+        description: "enviro,ment"
+        required: true
+      cluster-name:
+        description: "cluster name"
+        required: true
+      region:
+        description: "region"
+        required: true
+
 jobs:
-  update-snapshots:
-    if: contains(needs.push.outputs.labels.*.name, 'update snapshots')
+  test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      - name: Use Node.js 16.x
-        uses: actions/setup-node@v3
-        with:
-          node-version: '16.x'
-      - name: Install dependencies
-        run: npm ci
-      - name: Install browsers
-        run: npx playwright install --with-deps
-      - uses: actions/github-script@v3.1.0
-        name: Download built storybook from CI
-        id: storybook-artifact
+      - run: |
+          echo "${{ inputs.project-id }}"
+          echo "${{ inputs.environment }}"
+          echo "${{ inputs.cluster-name }}"
+          echo "${{ inputs.region }}"
        
     
 
