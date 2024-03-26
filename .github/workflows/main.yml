@@ -1,22 +1,38 @@
 # .github/workflows/main.yaml
 name: Main Workflow
 on:
-  push:
+  
+  workflow_dispatch:
+    inputs:
+      RELEASE:
+        required: true
+        type: string
+      ARCH:
+        required: true
+        type: string
+      IMAGE:
+        required: true
+        type: string
+      DOCKERFILE:
+        required: true
+        type: string
+      CACHE:
+        required: false
+        type: boolean
+        default: true
+      PUSH:
+        required: false
+        type: boolean
+        default: true
+      CACHE_SUFFIX:
+        required: false
+        type: boolean
+        default: ""
   
 jobs:
   main:
     name: Build APKs
     runs-on: ubuntu-latest
-    # Skip for `main` and the merge queue if the branch is up to date with `develop`
-    if: github.ref != 'refs/heads/master' && github.event.merge_group.base_ref != 'refs/heads/main'
-    strategy:
-      matrix:
-        variant: [debug, release, nightly, samples]
-      fail-fast: false
-    # Allow all jobs on develop. Just one per PR.
-    concurrency:
-      group: ${{ github.ref == 'refs/heads/main' && format('build-main-{1}', github.sha) || format('build-{0}-{1}', matrix.variant, github.ref)  }}
-      cancel-in-progress: true
     steps:
       - uses: actions/checkout@v3
        
