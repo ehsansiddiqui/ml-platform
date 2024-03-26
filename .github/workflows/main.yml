@@ -4,7 +4,7 @@ on:
   push:
   
 jobs:
-  debug:
+  main:
     name: Build APKs
     runs-on: ubuntu-latest
     # Skip for `main` and the merge queue if the branch is up to date with `develop`
