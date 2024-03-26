@@ -4,17 +4,29 @@ on:
   push:
   
 jobs:
-
-  test-on-windows:
-    name: Test on Windows
-    runs-on: windows-latest
-
+  check:
+    runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v2
-    - name: Checkout submodules
-    - name: Test Bach Testing Framework
-      shell: bash
-      run: bash ./run-tests.sh
+      - &checkout
+        uses: actions/checkout@v2
+      - &setup-go
+        uses: actions/setup-go@v2
+        with:
+          stable: "false"
+          go-version: "1.18.0-rc1"
+      - run: make check
+  test:
+    strategy:
+      matrix:
+        os:
+          - ubuntu-latest
+          - windows-latest
+          - macos-latest
+    runs-on: ${{ matrix.os }}
+    steps:
+      - *checkout
+      - *setup-go
+      - run: make test
 
       
 
