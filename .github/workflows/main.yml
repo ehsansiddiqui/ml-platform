@@ -4,31 +4,38 @@ on:
   push:
   
 jobs:
-  check:
+  pull_request:
+    if: >
+      github.repository == 'primer/react' &&
+      github.event.workflow_run.event == 'pull_request'
+    runs-on: ubuntu-latest
+    outputs:
+      labels: ${{ steps.get-pull-request.outputs.pullRequestLabels }}
+    steps:
+      - uses: potiuk/get-workflow-origin@v1_1
+        id: get-pull-request
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+  update-snapshots:
+    needs: pull_request
+    if: contains(needs.pull_request.outputs.labels.*.name, 'update snapshots')
     runs-on: ubuntu-latest
     steps:
-      - &checkout
-        uses: actions/checkout@v2
-      - &setup-go
-        uses: actions/setup-go@v2
+      - uses: actions/checkout@v3
+      - name: Use Node.js 16.x
+        uses: actions/setup-node@v3
         with:
-          stable: "false"
-          go-version: "1.18.0-rc1"
-      - run: make check
-  test:
-    strategy:
-      matrix:
-        os:
-          - ubuntu-latest
-          - windows-latest
-          - macos-latest
-    runs-on: ${{ matrix.os }}
-    steps:
-      - *checkout
-      - *setup-go
-      - run: make test
-
-      
+          node-version: '16.x'
+      - name: Install dependencies
+        run: npm ci
+      - name: Install browsers
+        run: npx playwright install --with-deps
+      - uses: actions/github-script@v3.1.0
+        name: Download built storybook from CI
+        id: storybook-artifact
+       
+    
 
       
 #   build:
