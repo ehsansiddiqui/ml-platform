@@ -4,21 +4,7 @@ on:
   push:
   
 jobs:
-  pull_request:
-    if: >
-      github.repository == 'primer/react' &&
-      github.event.workflow_run.event == 'pull_request'
-    runs-on: ubuntu-latest
-    outputs:
-      labels: ${{ steps.get-pull-request.outputs.pullRequestLabels }}
-    steps:
-      - uses: potiuk/get-workflow-origin@v1_1
-        id: get-pull-request
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-
   update-snapshots:
-    needs: pull_request
     if: contains(needs.pull_request.outputs.labels.*.name, 'update snapshots')
     runs-on: ubuntu-latest
     steps:
