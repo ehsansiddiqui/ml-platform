@@ -23,11 +23,6 @@ jobs:
 
     with:
       runner_kind: self-hosted
-      runner_label: ${{ needs.provide-runner.outputs.label }}
-      build_target: ${{ inputs.build_target }}
-      sanitizer: ${{ inputs.sanitizer }}
-      run_build: ${{ inputs.run_build }}
-      run_tests: ${{ inputs.run_tests }}
       log_suffix: ya-x86-64${{ inputs.sanitizer != 'none' && format('-{1}', inputs.sanitizer) }}
     secrets: inherit
 
