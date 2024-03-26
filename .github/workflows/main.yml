@@ -2,40 +2,29 @@
 name: Main Workflow
 on:
   push:
-  create:
-    types: []
   
 jobs:
-  release_packages:
-    name: Release Packages
+  debug:
+    name: Build APKs
     runs-on: ubuntu-latest
+    # Skip for `main` and the merge queue if the branch is up to date with `develop`
+    if: github.ref != 'refs/heads/main' && github.event.merge_group.base_ref != 'refs/heads/develop'
+    strategy:
+      matrix:
+        variant: [debug, release, nightly, samples]
+      fail-fast: false
+    # Allow all jobs on develop. Just one per PR.
+    concurrency:
+      group: ${{ github.ref == 'refs/heads/develop' && format('build-develop-{1}', github.sha) || format('build-{0}-{1}', matrix.variant, github.ref)  }}
+      cancel-in-progress: true
     steps:
-      - name: Checkout Repo
-        uses: actions/checkout@master
+      - uses: actions/checkout@v3
         
-      - name: Check that the generated files exist
-        run: |
-          set -e
-          for file in ${{ join(matrix.generated-files.*, ' ') }}; do
-            ls -lh $file
-            test -f $file
-          done
-          
-      - name: Possibly deploy WordPress plugin
-        # Checks the changesets publishedPackages output
-        # If there is a published package named "@faustwp/wordpress-plugin"
-        # Then deploy the WordPress plugin
-        # https://github.com/changesets/action#outputs
-        if: contains(steps.changesets.outputs.publishedPackages.*.name, '@faustwp/wordpress-plugin')
-        # Use a variant of 10up/action-wordpress-plugin-deploy that allows us to specify a PLUGIN_DIR
-        # to support our monorepo structure.
-        uses: ./.github/actions/release-plugin
-        env:
-          SVN_PASSWORD: ${{ secrets.SVN_PASSWORD }}
-          SVN_USERNAME: ${{ secrets.SVN_USERNAME }}
-          PLUGIN_DIR: plugins/faustwp
-          SLUG: faustwp
-
+      - name: Use JDK 17
+        uses: actions/setup-java@v3
+      
+     
+  
   
 
       
