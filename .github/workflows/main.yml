@@ -7,7 +7,6 @@ on:
     outputs:
       project-id:
         description: "description"
-        required: true
       environment:
         description: "enviro,ment"
         required: true
