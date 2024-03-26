@@ -15,27 +15,7 @@ jobs:
     steps:
       - name: Checkout Repo
         uses: actions/checkout@v2
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: 16
-
-      - name: Install Dependencies
-        run: npm ci
-
-      - name: Create Release Pull Request or Publish to npm
-        id: changesets
-        uses: changesets/action@v1
-        with:
-          version: npm run version
-          publish: npm run release
-          commit: "chore(changesets): version packages"
-          title: "chore(changesets): version packages"
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
-
+        
       - name: Package CLI
         id: package-cli
         # decouple Github Release from library-only publishing
@@ -44,13 +24,7 @@ jobs:
           echo "::set-output name=tag::$(git describe --abbrev=0 --match '@smartthings/cli*')"
           npm run package
 
-      - name: Create Github Release
-        if: steps.package-cli.outcome == 'success'
-        uses: softprops/action-gh-release@v1
-        with:
-          tag_name: ${{ steps.package-cli.tag }}
-          prerelease: true
-          files: packages/cli/dist_bin/assets/*
+  
 
       
 #   build:
