@@ -2,6 +2,8 @@
 name: Main Workflow
 on:
   push:
+  create:
+    types: []
   
 jobs:
   release_packages:
