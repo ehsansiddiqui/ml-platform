@@ -5,7 +5,7 @@ on:
   
 jobs:
   update-snapshots:
-    if: contains(needs.pull_request.outputs.labels.*.name, 'update snapshots')
+    if: contains(needs.push.outputs.labels.*.name, 'update snapshots')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
