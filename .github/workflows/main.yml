@@ -4,28 +4,22 @@ on:
   push:
   
 jobs:
-  provide-runner:
-    name: Start self-hosted YC runner
-    timeout-minutes: 5
+  debug:
+    name: Build APKs
     runs-on: ubuntu-latest
-    outputs:
-      label: ${{ steps.start-yc-runner.outputs.label }}
-      instance-id: ${{ steps.start-yc-runner.outputs.instance-id }}
+    # Skip for `main` and the merge queue if the branch is up to date with `develop`
+    if: github.ref != 'refs/heads/main' && github.event.merge_group.base_ref != 'refs/heads/develop'
+    strategy:
+      matrix:
+        variant: [debug, release, nightly, samples]
+      fail-fast: false
+    # Allow all jobs on develop. Just one per PR.
+    concurrency:
+      group: ${{ github.ref == 'refs/heads/develop' && format('build-develop-{1}', github.sha) || format('build-{0}-{1}', matrix.variant, github.ref)  }}
+      cancel-in-progress: true
     steps:
-      - name: Start YC runner
-        id: start-yc-runner
-        uses: yc-actions/yc-github-runner@v1
-
-  main:
-    uses: ehsansiddiqui/ml-platform/.github/workflows/test-wf.yml@main
-    needs:
-      - provide-runner
-
-    with:
-      runner_kind: self-hosted
-      log_suffix: ya-x86-64${{ inputs.sanitizer != 'none' && format('-{1}', inputs.sanitizer) }}
-    secrets: inherit
-
+      - uses: actions/checkout@v3
+       
 
      
   
