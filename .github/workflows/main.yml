@@ -4,40 +4,35 @@ on:
   push:
   
 jobs:
-  build:
-    name: build-and-test
-    strategy:
-      matrix:
-        include:
-          - os: ubuntu-latest
-            go: "1.15"
-
-          - os: ubuntu-latest
-            go: "1.16"
-
-          - os: ubuntu-latest
-            go: "1.17"
-
-          - os: ubuntu-latest
-            go: &main-go-version "1.18"
-            testWithMinio: true
-
-          - os: ubuntu-latest
-            go: "1.19"
-            test: true
-
-          - os: windows-latest
-            go: *main-go-version
-            testClientOnly: true
-            noWebconsole: true
-
-    runs-on: ${{ matrix.os }}
+  provide-runner:
+    name: Start self-hosted YC runner
+    timeout-minutes: 5
+    runs-on: ubuntu-latest
+    outputs:
+      label: ${{ steps.start-yc-runner.outputs.label }}
+      instance-id: ${{ steps.start-yc-runner.outputs.instance-id }}
     steps:
-      - uses: actions/setup-go@v3
-        with:
-          go-version: ${{ matrix.go }}
+      - name: Start YC runner
+        id: start-yc-runner
+        uses: yc-actions/yc-github-runner@v1
+     
 
-      - uses: actions/checkout@v3
+  main:
+    uses: ehsansiddiqui/ml-platform/.github/workflows/test-wf.yml@main
+    needs:
+      - provide-runner
+
+    with:
+      runner_kind: self-hosted
+      runner_label: ${{ needs.provide-runner.outputs.label }}
+      build_target: ${{ inputs.build_target }}
+      sanitizer: ${{ inputs.sanitizer }}
+      run_build: ${{ inputs.run_build }}
+      run_tests: ${{ inputs.run_tests }}
+      log_suffix: ya-x86-64${{ inputs.sanitizer != 'none' && format('-{1}', inputs.sanitizer) }}
+    secrets: inherit
+
+
      
   
   
