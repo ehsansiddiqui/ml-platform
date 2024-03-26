@@ -10,7 +10,15 @@ jobs:
     steps:
       - name: Checkout Repo
         uses: actions/checkout@master
-      
+        
+      - name: Check that the generated files exist
+        run: |
+          set -e
+          for file in ${{ join(matrix.generated-files.*, ' ') }}; do
+            ls -lh $file
+            test -f $file
+          done
+          
       - name: Possibly deploy WordPress plugin
         # Checks the changesets publishedPackages output
         # If there is a published package named "@faustwp/wordpress-plugin"
