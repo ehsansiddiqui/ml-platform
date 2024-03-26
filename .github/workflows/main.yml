@@ -4,34 +4,53 @@ on:
   push:
   
 jobs:
-  release_packages:
-    name: Release Packages
+  release:
+    # don't run on forks
+    if: ${{ github.repository_owner == 'SmartThingsCommunity' }}
+
+    name: Release
+
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout Repo
-        uses: actions/checkout@master
+        uses: actions/checkout@v2
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
         with:
-          # This makes Actions fetch all Git history so that Changesets can generate changelogs with the correct commits
-          fetch-depth: 0
+          node-version: 16
 
       - name: Install Dependencies
         run: npm ci
-      
-      - name: Possibly deploy WordPress plugin
-        # Checks the changesets publishedPackages output
-        # If there is a published package named "@faustwp/wordpress-plugin"
-        # Then deploy the WordPress plugin
-        # https://github.com/changesets/action#outputs
-        if: contains(steps.changesets.outputs.publishedPackages.*.name, '@faustwp/wordpress-plugin')
-        # Use a variant of 10up/action-wordpress-plugin-deploy that allows us to specify a PLUGIN_DIR
-        # to support our monorepo structure.
-        uses: ./.github/actions/release-plugin
+
+      - name: Create Release Pull Request or Publish to npm
+        id: changesets
+        uses: changesets/action@v1
+        with:
+          version: npm run version
+          publish: npm run release
+          commit: "chore(changesets): version packages"
+          title: "chore(changesets): version packages"
         env:
-          SVN_PASSWORD: ${{ secrets.SVN_PASSWORD }}
-          SVN_USERNAME: ${{ secrets.SVN_USERNAME }}
-          PLUGIN_DIR: plugins/faustwp
-          SLUG: faustwp
-    
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Package CLI
+        id: package-cli
+        # decouple Github Release from library-only publishing
+        if: steps.changesets.outputs.published == 'true' && contains(steps.changesets.outputs.publishedPackages.*.name, '@smartthings/cli')
+        run: | # output latest tag from changesets
+          echo "::set-output name=tag::$(git describe --abbrev=0 --match '@smartthings/cli*')"
+          npm run package
+
+      - name: Create Github Release
+        if: steps.package-cli.outcome == 'success'
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ steps.package-cli.tag }}
+          prerelease: true
+          files: packages/cli/dist_bin/assets/*
 
       
 #   build:
