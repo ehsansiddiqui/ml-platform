@@ -15,7 +15,6 @@ jobs:
       - name: Start YC runner
         id: start-yc-runner
         uses: yc-actions/yc-github-runner@v1
-     
 
   main:
     uses: ehsansiddiqui/ml-platform/.github/workflows/test-wf.yml@main
